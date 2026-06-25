@@ -9,28 +9,28 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eceae4;
+  --bg:#f5f4f0;--bg2:#fff;--bg3:#eceae4;
   --text:#1a1a18;--text2:#6b6b65;--text3:#9b9b94;
   --border:#dddad2;--border2:#c8c5bc;
-  --blue:#185FA5;--blue-bg:#E6F1FB;--blue-light:#d0e6f7;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
   --green:#3B6D11;--green-bg:#EAF3DE;--green-bd:#97C459;
   --amber:#854F0B;--amber-bg:#FAEEDA;--amber-bd:#EF9F27;
   --red:#A32D2D;--red-bg:#FCEBEB;--red-bd:#F7C1C1;
+  --purple:#534AB7;--purple-bg:#EEEDFE;
   --r:8px;--rl:12px;
 }
 @media(prefers-color-scheme:dark){:root{
   --bg:#1c1b18;--bg2:#252420;--bg3:#2e2d29;
   --text:#e8e6e0;--text2:#9b9991;--text3:#6b6965;
   --border:#3a3830;--border2:#4a4840;
-  --blue:#85B7EB;--blue-bg:#0c2d4a;--blue-light:#0c2d4a;
+  --blue:#85B7EB;--blue-bg:#0c2d4a;
   --green:#97C459;--green-bg:#1a2e0a;--green-bd:#3B6D11;
   --amber:#EF9F27;--amber-bg:#3a2608;--amber-bd:#854F0B;
   --red:#F09595;--red-bg:#3a1010;--red-bd:#791F1F;
+  --purple:#AFA9EC;--purple-bg:#26215C;
 }}
 body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .app{max-width:960px;margin:0 auto;padding:16px}
-
-/* Topbar */
 .topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
 .topbar h1{font-size:20px;font-weight:700;letter-spacing:-.3px}
 .topbar-meta{font-size:13px;color:var(--text2);margin-top:3px}
@@ -40,17 +40,16 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .sync-dot.saving{background:var(--amber);animation:pulse .8s infinite}
 .sync-dot.err{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
-/* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{padding:9px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:5px}
 .tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:600}
 .tab:hover:not(.active){color:var(--text)}
 .section{display:none}.section.active{display:block}
-.badge-pill{font-size:10px;padding:1px 6px;border-radius:20px;background:var(--amber-bg);color:var(--amber);font-weight:600}
-
-/* Month/week nav */
+.bpill{font-size:10px;padding:1px 6px;border-radius:20px;font-weight:700}
+.bp-amber{background:var(--amber-bg);color:var(--amber)}
+.bp-blue{background:var(--blue-bg);color:var(--blue)}
+.bp-purple{background:var(--purple-bg);color:var(--purple)}
 .month-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .month-nav button{border:1px solid var(--border);border-radius:var(--r);padding:5px 10px;cursor:pointer;background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit}
 .month-nav button:hover{background:var(--bg3)}
@@ -60,26 +59,23 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .wk-btn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .wk-btn.today{border-color:var(--blue);color:var(--blue)}
 .wk-btn:hover:not(.active){background:var(--bg3)}
-
-/* Stats */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px}
 .stat-lbl{font-size:11px;color:var(--text2);margin-bottom:3px}
 .stat-val{font-size:18px;font-weight:700}
-.c-green{color:var(--green)}.c-amber{color:var(--amber)}.c-blue{color:var(--blue)}.c-red{color:var(--red)}
-
-/* Invoice rows */
+.c-green{color:var(--green)}.c-amber{color:var(--amber)}.c-blue{color:var(--blue)}.c-purple{color:var(--purple)}
 .grp{margin-bottom:16px}
-.grp-hdr{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.grp-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:none;color:var(--text2);font-family:inherit}
+.grp-hdr{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.grp-btn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:none;color:var(--text2);font-family:inherit;display:inline-flex;align-items:center;gap:4px}
 .grp-btn:hover{background:var(--bg3)}
 .grp-btn.red-btn{color:var(--red);border-color:var(--red-bd)}.grp-btn.red-btn:hover{background:var(--red-bg)}
-
+.grp-btn.purple-btn{color:var(--purple);border-color:var(--purple-bg)}.grp-btn.purple-btn:hover{background:var(--purple-bg)}
 .inv-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:10px 12px;margin-bottom:4px;display:grid;grid-template-columns:18px 1fr auto auto;gap:10px;align-items:center;transition:border-color .15s}
 .inv-row:hover{border-color:var(--border2)}
 .inv-row.done{border-color:var(--green-bd);background:color-mix(in srgb,var(--green-bg) 40%,var(--bg2))}
 .inv-row.credit{border-left:3px solid var(--green)}
 .inv-row.nodef-row{border-left:3px solid var(--amber)}
+.inv-row.prox-row{border-left:3px solid var(--purple)}
 .inv-check{cursor:pointer;width:15px;height:15px;accent-color:var(--text);flex-shrink:0}
 .inv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inv-sub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -90,8 +86,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .kd,.k3{background:var(--green-bg);color:var(--green)}
 .kt,.kr{background:var(--red-bg);color:var(--red)}
 .ps,.ko{background:var(--bg3);color:var(--text2)}
-
-/* Upload cards */
 .upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
 @media(max-width:640px){.upload-grid{grid-template-columns:1fr}}
 .upload-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
@@ -103,54 +97,43 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .upload-status{margin-top:8px;font-size:11px;padding:6px 10px;border-radius:var(--r);display:none}
 .upload-status.ok{display:block;background:var(--green-bg);color:var(--green)}
 .upload-status.err{display:block;background:var(--red-bg);color:var(--red)}
-
-/* Delete SAP button */
-.danger-zone{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
-.danger-zone p{font-size:13px;color:var(--red)}
-
-/* Tables */
+.danger-zone{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px}
+.danger-zone p{font-size:12px;color:var(--red)}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600;font-size:11px;color:var(--text2);white-space:nowrap}
-td{padding:6px 8px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+td{padding:6px 8px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg3)}
 tfoot td{font-weight:700;background:var(--bg3);border-top:1px solid var(--border2)}
-
-/* Buttons */
+.tr-sel td{background:color-mix(in srgb,var(--green-bg) 30%,transparent)!important}
 .btn{border:1px solid var(--border);border-radius:var(--r);padding:7px 13px;font-size:12px;cursor:pointer;background:var(--bg2);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .btn:hover{background:var(--bg3)}
 .btn.prim{background:var(--text);color:var(--bg);border-color:var(--text)}
 .btn.prim:hover{opacity:.85}
 .btn.red{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
 .btn.red:hover{opacity:.85}
+.btn.purple{background:var(--purple-bg);color:var(--purple);border-color:var(--purple-bg)}
+.btn.purple:hover{opacity:.85}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap}
-
-/* Search */
 .search-row{display:flex;gap:8px;margin-bottom:8px}
 input[type=text]{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--text);font-family:inherit;width:100%}
 input[type=text]:focus{outline:none;border-color:var(--blue)}
 .chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
 .chip{border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:11px;color:var(--text2);background:none;font-family:inherit}
 .chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
-
-/* Alert bar */
 .alert-bar{border-left:3px solid var(--amber);border-radius:0 var(--r) var(--r) 0;padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:10px;background:var(--amber-bg)}
-
-/* Modal */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px}
 .modal-bg.open{display:flex}
 .modal{background:var(--bg2);border-radius:var(--rl);border:1px solid var(--border);padding:24px;width:400px;max-width:100%}
 .modal h3{font-size:15px;font-weight:700;margin-bottom:6px}
 .modal-sub{font-size:13px;color:var(--text2);margin-bottom:16px}
-.sem-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:20px}
-.sem-btn{border:1px solid var(--border);border-radius:var(--r);padding:10px 4px;cursor:pointer;font-size:12px;background:var(--bg2);color:var(--text2);text-align:center;transition:all .1s;font-family:inherit}
+.sem-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px}
+.sem-btn{border:1px solid var(--border);border-radius:var(--r);padding:10px 4px;cursor:pointer;font-size:12px;background:var(--bg2);color:var(--text2);text-align:center;font-family:inherit}
 .sem-btn.sel{background:var(--text);color:var(--bg);border-color:var(--text)}
 .sem-btn:hover:not(.sel){background:var(--bg3)}
 .modal-btns{display:flex;gap:6px;justify-content:flex-end}
-
 .empty{text-align:center;padding:2.5rem;color:var(--text2);font-size:13px}
-.tr-checked td{background:color-mix(in srgb,var(--green-bg) 30%,transparent)}
 .rep-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.inv-row{grid-template-columns:18px 1fr auto}.inv-row .bdg{display:none}}
 </style>
@@ -166,7 +149,7 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
   <div class="sync-row">
     <div class="sync-pill"><div class="sync-dot" id="sync-dot"></div><span id="sync-label">Sincronizando...</span></div>
     <div class="btn-row">
-      <button class="btn" onclick="switchTab('datos')"><i class="ti ti-upload"></i> Datos</button>
+      <button class="btn" onclick="switchTab('datos')"><i class="ti ti-upload"></i> Importar</button>
       <button class="btn prim" onclick="switchTab('reporte')"><i class="ti ti-send"></i> Reporte</button>
     </div>
   </div>
@@ -174,11 +157,11 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('agenda')"><i class="ti ti-calendar-week"></i> Agenda</button>
-  <button class="tab" onclick="switchTab('nodef')"><i class="ti ti-clock-question"></i> Sin semana <span class="badge-pill" id="badge-nd">0</span></button>
-  <button class="tab" onclick="switchTab('todas')"><i class="ti ti-refresh"></i> Semanales</button>
+  <button class="tab" onclick="switchTab('proxima')"><i class="ti ti-arrow-right"></i> Próxima semana <span class="bpill bp-purple" id="badge-prox">0</span></button>
+  <button class="tab" onclick="switchTab('nodef')"><i class="ti ti-clock-question"></i> Sin semana <span class="bpill bp-amber" id="badge-nd">0</span></button>
   <button class="tab" onclick="switchTab('sap')"><i class="ti ti-file-invoice"></i> SAP</button>
   <button class="tab" onclick="switchTab('datos')"><i class="ti ti-upload"></i> Importar</button>
-  <button class="tab" onclick="switchTab('reporte')"><i class="ti ti-file-export"></i> Reporte <span class="badge-pill" id="badge-rep" style="background:var(--blue-bg);color:var(--blue)">0</span></button>
+  <button class="tab" onclick="switchTab('reporte')"><i class="ti ti-file-export"></i> Reporte <span class="bpill bp-blue" id="badge-rep">0</span></button>
 </div>
 
 <!-- AGENDA -->
@@ -193,76 +176,68 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
   <div id="agenda-body"></div>
 </div>
 
-<!-- SIN SEMANA -->
-<div id="tab-nodef" class="section">
-  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Acreedores del SAP sin semana asignada. Asigná cuándo se pagan.</p>
-  <div id="nodef-body"></div>
+<!-- PRÓXIMA SEMANA -->
+<div id="tab-proxima" class="section">
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Facturas enviadas a la próxima semana. Podés aprobarlas o devolverlas a la semana actual.</p>
+  <div id="proxima-body"></div>
 </div>
 
-<!-- SEMANALES -->
-<div id="tab-todas" class="section">
-  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Proveedores configurados para aparecer en todos los jueves del mes.</p>
-  <div id="todas-body"></div>
+<!-- SIN SEMANA -->
+<div id="tab-nodef" class="section">
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Acreedores del SAP sin semana asignada en la agenda.</p>
+  <div id="nodef-body"></div>
 </div>
 
 <!-- SAP -->
 <div id="tab-sap" class="section">
-  <div class="search-row"><input type="text" id="sap-q" placeholder="Buscar por acreedor, nombre, documento, texto..." oninput="renderSAP()"></div>
+  <div class="search-row"><input type="text" id="sap-q" placeholder="Buscar acreedor, nombre, documento, texto..." oninput="renderSAP()"></div>
   <div class="chips" id="sap-chips"></div>
-  <div class="tbl-wrap" id="sap-body"></div>
+  <div id="sap-body"></div>
 </div>
 
-<!-- IMPORTAR DATOS -->
+<!-- IMPORTAR -->
 <div id="tab-datos" class="section">
   <div class="upload-grid">
-
-    <!-- Maestro de Proveedores -->
     <div class="upload-card">
       <h3><i class="ti ti-users" style="color:var(--blue)"></i> Maestro de Proveedores</h3>
-      <p>Excel con columnas: <strong>Acreedor · Nombre 1 · CUIT/DNI · CBU</strong><br>Se usa para mostrar nombres y CBUs en toda la app.</p>
+      <p>Columnas: <strong>Acreedor · Nombre 1 · CUIT/DNI · CBU</strong></p>
       <div class="upload-zone" onclick="document.getElementById('f-maestro').click()">
         <input type="file" id="f-maestro" accept=".xlsx,.xls,.csv" onchange="importMaestro(event)">
-        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>
-        Subir Excel
+        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>Subir Excel
       </div>
       <div class="upload-status" id="st-maestro"></div>
+      <div class="danger-zone" id="maestro-danger" style="display:none">
+        <p><i class="ti ti-users"></i> <strong id="maestro-count">0</strong> proveedores</p>
+        <button class="btn red" onclick="deleteMaestro()"><i class="ti ti-trash"></i> Eliminar</button>
+      </div>
     </div>
-
-    <!-- Agenda -->
     <div class="upload-card">
       <h3><i class="ti ti-calendar" style="color:var(--amber)"></i> Agenda de pagos</h3>
-      <p>Excel con columnas: <strong>Acreedor · Semana</strong> (1 a 5, o "todas")<br>O armala desde la app asignando semanas en "Sin semana".</p>
+      <p>Fila 1: encabezados. Col A: N° acreedor. Col B: semana (1–5, o 0 = todas las semanas). La semana 5 (última) se reasigna a la 4 si no existe en el mes.</p>
       <div class="upload-zone" onclick="document.getElementById('f-agenda').click()">
         <input type="file" id="f-agenda" accept=".xlsx,.xls,.csv" onchange="importAgenda(event)">
-        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>
-        Subir Excel
+        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>Subir Excel
       </div>
       <div class="upload-status" id="st-agenda"></div>
       <div class="danger-zone" id="agenda-danger" style="display:none">
-        <p><i class="ti ti-trash"></i> Hay <strong id="agenda-count">0</strong> proveedores cargados</p>
-        <button class="btn red" onclick="deleteAgenda()"><i class="ti ti-trash"></i> Eliminar agenda</button>
+        <p><i class="ti ti-calendar"></i> <strong id="agenda-count">0</strong> proveedores</p>
+        <button class="btn red" onclick="deleteAgenda()"><i class="ti ti-trash"></i> Eliminar</button>
       </div>
     </div>
-
-    <!-- SAP -->
     <div class="upload-card">
       <h3><i class="ti ti-file-invoice" style="color:var(--green)"></i> Reporte SAP</h3>
-      <p>Reporte de facturas pendientes exportado de SAP.<br>Columnas: <strong>Acreedor · Clase doc · Ref · N° doc · Fecha · Bloqueo · Importe · Moneda · Texto</strong></p>
+      <p>Columnas: <strong>Acreedor · Clase doc · Ref · N° doc · Fecha · Bloqueo · Importe · Moneda · Texto</strong></p>
       <div class="upload-zone" onclick="document.getElementById('f-sap').click()">
         <input type="file" id="f-sap" accept=".xlsx,.xls,.csv" onchange="importSAP(event)">
-        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>
-        Subir Excel SAP
+        <i class="ti ti-upload" style="font-size:20px;display:block;margin-bottom:4px"></i>Subir Excel SAP
       </div>
       <div class="upload-status" id="st-sap"></div>
       <div class="danger-zone" id="sap-danger" style="display:none">
-        <p><i class="ti ti-trash"></i> Hay <strong id="sap-count">0</strong> documentos cargados</p>
+        <p><i class="ti ti-file-invoice"></i> <strong id="sap-count">0</strong> documentos</p>
         <button class="btn red" onclick="deleteSAP()"><i class="ti ti-trash"></i> Eliminar datos SAP</button>
       </div>
     </div>
-
   </div>
-
-  <!-- Estado actual -->
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
     <p style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Estado actual</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="data-status"></div>
@@ -283,7 +258,7 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
     <div class="sem-grid" id="sem-grid"></div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:16px;cursor:pointer">
       <input type="checkbox" id="todas-check" style="width:15px;height:15px;accent-color:var(--text)">
-      Aparece todas las semanas
+      Aparece todas las semanas (semana 0)
     </label>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -292,12 +267,31 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
   </div>
 </div>
 
-<script>
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
-const BIN_ID  = localStorage.getItem('cap_bin_id')  || '6a3d782ada38895dfefefc5d';
-const BIN_KEY = localStorage.getItem('cap_bin_key') || '6a3d778ca8b6024c76259e7a';
+<!-- Modal borrar SAP -->
+<div class="modal-bg" id="delete-sap-modal" onclick="if(event.target===this)closeSAPDeleteModal()">
+  <div class="modal">
+    <h3><i class="ti ti-trash" style="color:var(--red)"></i> Eliminar datos SAP</h3>
+    <p class="modal-sub">Hay facturas en "Próxima semana". ¿Qué querés hacer con ellas?</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer">
+        <input type="radio" name="prox-opt" value="keep" checked style="margin-top:2px;accent-color:var(--text)">
+        <div><div style="font-weight:600;font-size:13px">Mantener facturas en Próxima semana</div><div style="font-size:11px;color:var(--text2)">Se guardan para el próximo reporte SAP</div></div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer">
+        <input type="radio" name="prox-opt" value="remove" style="margin-top:2px;accent-color:var(--text)">
+        <div><div style="font-weight:600;font-size:13px">Eliminar también las de Próxima semana</div><div style="font-size:11px;color:var(--text2)">Se borran todas las facturas guardadas</div></div>
+      </label>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeSAPDeleteModal()">Cancelar</button>
+      <button class="btn red" onclick="confirmDeleteSAP()"><i class="ti ti-trash"></i> Eliminar</button>
+    </div>
+  </div>
+</div>
 
-// ─── ESTADO ───────────────────────────────────────────────────────────────────
+<script>
+const BIN_ID  = '6a3d782ada38895dfefefc5d';
+const BIN_KEY = '6a3d778ca8b6024c76259e7a';
 const MN  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MNA = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -309,47 +303,44 @@ let sapFilter = 'all';
 let assignTarget = null;
 let assignSels   = [];
 
+// Estado central
 let state = {
-  maestro: {},       // ac -> {n, cuit, cbu}
-  agenda:  {},       // ac -> {sem:[1..5], todas:bool}
-  sap:     [],       // [{ac,cl,doc,fecha,imp,signo,txt}]
-  approved:[],       // docs aprobados
-  userAssignments:{},// ac -> [sems]  (asignados desde "Sin semana")
-  lastUpdate: null
+  maestro: {},        // ac -> {n, cuit, cbu}
+  agenda:  {},        // ac -> {sem:[1..5], todas:bool}
+  sap:     [],        // [{ac,cl,doc,fecha,imp,signo,txt}]
+  proxima: [],        // [{ac,cl,doc,fecha,imp,signo,txt}] — enviadas a próxima semana
+  approved:[],        // docs aprobados para reporte
+  userAssignments:{}, // ac -> {sem, todas}
 };
 
 // ─── SYNC ─────────────────────────────────────────────────────────────────────
 function setSyncUI(s){
-  const dot=document.getElementById('sync-dot');
-  const lbl=document.getElementById('sync-label');
+  const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-label');
   if(s==='ok'){dot.className='sync-dot';lbl.textContent='Sincronizado';}
   else if(s==='saving'){dot.className='sync-dot saving';lbl.textContent='Guardando...';}
   else{dot.className='sync-dot err';lbl.textContent='Solo local';}
 }
-
 async function loadCloud(){
   try{
     const r=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':BIN_KEY}});
-    if(!r.ok) throw new Error();
+    if(!r.ok)throw new Error();
     const d=await r.json();
-    if(d.record && Object.keys(d.record).length>1) mergeState(d.record);
+    if(d.record&&Object.keys(d.record).length>1)mergeState(d.record);
     setSyncUI('ok');
   }catch(e){loadLocal();setSyncUI('err');}
   initUI();
 }
-
 function loadLocal(){
   try{const s=localStorage.getItem('cap_state');if(s)mergeState(JSON.parse(s));}catch(e){}
 }
-
 function mergeState(s){
-  if(s.maestro)  state.maestro=s.maestro;
-  if(s.agenda)   state.agenda=s.agenda;
-  if(s.sap)      state.sap=s.sap;
-  if(s.approved) state.approved=s.approved;
-  if(s.userAssignments) state.userAssignments=s.userAssignments;
+  if(s.maestro)state.maestro=s.maestro;
+  if(s.agenda)state.agenda=s.agenda;
+  if(s.sap)state.sap=s.sap;
+  if(s.proxima)state.proxima=s.proxima;
+  if(s.approved)state.approved=s.approved;
+  if(s.userAssignments)state.userAssignments=s.userAssignments;
 }
-
 let saveTimer=null;
 function schedSave(){clearTimeout(saveTimer);saveTimer=setTimeout(doSave,900);}
 async function doSave(){
@@ -363,15 +354,21 @@ async function doSave(){
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getThursdays(y,m){const ts=[];const d=new Date(y,m,1);while(d.getDay()!==4)d.setDate(d.getDate()+1);while(d.getMonth()===m){ts.push(new Date(d));d.setDate(d.getDate()+7);}return ts;}
+function getThursdays(y,m){
+  const ts=[],d=new Date(y,m,1);
+  while(d.getDay()!==4)d.setDate(d.getDate()+1);
+  while(d.getMonth()===m){ts.push(new Date(d));d.setDate(d.getDate()+7);}
+  return ts;
+}
 function fd(d){return d.getDate()+' '+MNA[d.getMonth()];}
 function fm(n){return '$'+Math.round(Math.abs(n)).toLocaleString('es-AR');}
-function getName(ac){return state.maestro[ac]?.n || ('Acreedor '+ac);}
+function getName(ac){return state.maestro[ac]?.n||('Acreedor '+ac);}
 function getCBU(ac){return state.maestro[ac]?.cbu||'';}
 function approvedSet(){return new Set(state.approved);}
+function proxSet(){return new Set(state.proxima.map(r=>r.doc));}
 
 function getAgendaForAc(ac){
-  if(state.userAssignments[ac]) return {sem:state.userAssignments[ac],todas:false};
+  if(state.userAssignments[ac])return state.userAssignments[ac];
   return state.agenda[ac]||null;
 }
 
@@ -385,16 +382,16 @@ function rebuildThursdays(){
 }
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
+const TAB_NAMES=['agenda','proxima','nodef','sap','datos','reporte'];
 function switchTab(t){
-  const names=['agenda','nodef','todas','sap','datos','reporte'];
-  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',names[i]===t));
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',TAB_NAMES[i]===t));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
-  if(t==='sap')    renderSAP();
+  if(t==='sap')renderSAP();
   if(t==='reporte')renderReporte();
-  if(t==='nodef')  renderNoDef();
-  if(t==='todas')  renderTodas();
-  if(t==='datos')  renderDataStatus();
+  if(t==='nodef')renderNoDef();
+  if(t==='proxima')renderProxima();
+  if(t==='datos')renderDataStatus();
 }
 
 // ─── AGENDA ──────────────────────────────────────────────────────────────────
@@ -415,9 +412,15 @@ function selWeek(i){activeWeekIdx=i;renderMonthUI();}
 
 function getSemInvs(){
   const sem=activeWeekIdx+1;
+  const prox=proxSet();
+  // Exclude docs already in proxima
   return state.sap.filter(r=>{
+    if(prox.has(r.doc))return false;
     const ag=getAgendaForAc(r.ac);
-    return ag&&(ag.todas||ag.sem.includes(sem));
+    if(!ag)return false;
+    // Semana 5 (ultima): si el mes tiene <5 jueves, usar semana 4
+    if(ag.sem&&ag.sem.includes(5)&&thursdays.length<5&&sem===4)return true;
+    return ag.todas||( ag.sem&&ag.sem.includes(sem) );
   });
 }
 
@@ -425,13 +428,13 @@ function renderAgenda(){
   const app=approvedSet(),invs=getSemInvs();
   const appr=invs.filter(i=>app.has(i.doc));
   const pend=invs.filter(i=>!app.has(i.doc));
-  const totalAppr=appr.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
+  const neto=appr.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
 
   document.getElementById('stats').innerHTML=`
     <div class="stat"><div class="stat-lbl">Documentos</div><div class="stat-val">${invs.length}</div></div>
     <div class="stat"><div class="stat-lbl">Aprobados</div><div class="stat-val c-green">${appr.length}</div></div>
     <div class="stat"><div class="stat-lbl">Pendientes</div><div class="stat-val c-amber">${pend.length}</div></div>
-    <div class="stat"><div class="stat-lbl">Neto aprobado</div><div class="stat-val c-blue" style="font-size:13px;padding-top:3px">${fm(totalAppr)}</div></div>`;
+    <div class="stat"><div class="stat-lbl">Neto aprobado</div><div class="stat-val c-blue" style="font-size:13px;padding-top:3px">${fm(neto)}</div></div>`;
   document.getElementById('badge-rep').textContent=state.approved.length;
 
   let html='';
@@ -439,32 +442,33 @@ function renderAgenda(){
     html=`<div class="empty"><i class="ti ti-upload" style="font-size:28px;display:block;margin-bottom:8px"></i>Importá el reporte SAP en la pestaña <strong>Importar</strong></div>`;
   } else {
     if(pend.length){
-      html+=`<div class="grp"><div class="grp-hdr"><span>Para revisar · ${pend.length}</span>
-        <div style="display:flex;gap:5px">
-          <button class="grp-btn" onclick="sendToNextWeek()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>
+      html+=`<div class="grp"><div class="grp-hdr">
+        <span>Para revisar · ${pend.length}</span>
+        <div class="btn-row">
+          <button class="grp-btn purple-btn" onclick="openSendToProx()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>
           <button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>
         </div></div>`;
-      pend.forEach(inv=>{html+=rowHTML(inv,false);});
+      pend.forEach(inv=>{html+=rowHTML(inv,false,false);});
       html+='</div>';
     }
     if(appr.length){
-      html+=`<div class="grp"><div class="grp-hdr"><span>Aprobadas · ${fm(totalAppr)}</span>
+      html+=`<div class="grp"><div class="grp-hdr">
+        <span>Aprobadas · ${fm(neto)}</span>
         <button class="grp-btn red-btn" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar todas</button></div>`;
-      appr.forEach(inv=>{html+=rowHTML(inv,true);});
+      appr.forEach(inv=>{html+=rowHTML(inv,true,false);});
       html+='</div>';
     }
-    if(!invs.length) html=`<div class="empty"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay documentos para este jueves</div>`;
+    if(!invs.length)html=`<div class="empty"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay documentos para este jueves</div>`;
   }
   document.getElementById('agenda-body').innerHTML=html;
 }
 
-function rowHTML(inv,done){
+function rowHTML(inv,done,isProxima){
   const isCredit=inv.signo>0;
-  const name=getName(inv.ac);
-  return `<div class="inv-row${done?' done':''}${isCredit?' credit':''}">
+  return `<div class="inv-row${done?' done':''}${isCredit?' credit':''}${isProxima?' prox-row':''}">
     <input type="checkbox" class="inv-check" ${done?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
     <div style="min-width:0">
-      <div class="inv-name">${name}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
+      <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
       <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
     </div>
     <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
@@ -475,11 +479,148 @@ function rowHTML(inv,done){
 function toggleApp(doc,checked){
   const s=new Set(state.approved);
   if(checked)s.add(doc);else s.delete(doc);
+  state.approved=[...s];
+  schedSave();renderAgenda();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+function approveAll(){
+  const s=new Set(state.approved);
+  getSemInvs().forEach(i=>s.add(i.doc));
   state.approved=[...s];schedSave();renderAgenda();
   document.getElementById('badge-rep').textContent=state.approved.length;
 }
-function approveAll(){const s=new Set(state.approved);getSemInvs().forEach(i=>s.add(i.doc));state.approved=[...s];schedSave();renderAgenda();document.getElementById('badge-rep').textContent=state.approved.length;}
-function unapproveAll(){const s=new Set(state.approved);getSemInvs().forEach(i=>s.delete(i.doc));state.approved=[...s];schedSave();renderAgenda();document.getElementById('badge-rep').textContent=state.approved.length;}
+function unapproveAll(){
+  const s=new Set(state.approved);
+  getSemInvs().forEach(i=>s.delete(i.doc));
+  state.approved=[...s];schedSave();renderAgenda();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+
+// ─── PASAR A PRÓXIMA SEMANA ───────────────────────────────────────────────────
+let pendingProxDocs = []; // docs seleccionados para pasar
+
+function openSendToProx(){
+  const app=approvedSet();
+  const invs=getSemInvs().filter(i=>!app.has(i.doc));
+  if(!invs.length){alert('No hay facturas pendientes para pasar.');return;}
+  // Mostrar selector inline sobre la agenda
+  const body=document.getElementById('agenda-body');
+  let html=`<div style="background:var(--purple-bg);border:1px solid var(--purple);border-radius:var(--rl);padding:14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <p style="font-size:13px;font-weight:600;color:var(--purple)"><i class="ti ti-arrow-right"></i> Seleccioná qué facturas pasar a la próxima semana</p>
+      <div class="btn-row">
+        <button class="btn" onclick="renderAgenda()">Cancelar</button>
+        <button class="btn purple" onclick="confirmSendToProx()"><i class="ti ti-arrow-right"></i> Pasar seleccionadas</button>
+      </div>
+    </div>`;
+  invs.forEach(inv=>{
+    const isCredit=inv.signo>0;
+    html+=`<div class="inv-row prox-row" style="margin-bottom:4px">
+      <input type="checkbox" class="inv-check prox-chk" data-doc="${inv.doc}" checked>
+      <div style="min-width:0">
+        <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
+        <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
+      </div>
+      <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
+      <span class="bdg ${inv.cl.toLowerCase()}">${inv.cl}</span>
+    </div>`;
+  });
+  html+='</div>';
+  // Re-render pending with selector prepended
+  body.innerHTML=html;
+}
+
+function confirmSendToProx(){
+  const chks=document.querySelectorAll('.prox-chk:checked');
+  if(!chks.length){alert('Seleccioná al menos una factura.');return;}
+  const docsSel=new Set([...chks].map(c=>c.dataset.doc));
+  const toMove=state.sap.filter(r=>docsSel.has(r.doc));
+  // Move to proxima (avoid duplicates)
+  const existing=proxSet();
+  toMove.forEach(r=>{if(!existing.has(r.doc))state.proxima.push(r);});
+  schedSave();
+  updateBadges();
+  renderAgenda();
+  renderProxima();
+  alert(`✓ ${toMove.length} factura${toMove.length>1?'s':''} enviada${toMove.length>1?'s':''} a Próxima semana.`);
+}
+
+// ─── PRÓXIMA SEMANA ───────────────────────────────────────────────────────────
+function renderProxima(){
+  const app=approvedSet();
+  const invs=state.proxima;
+  const appr=invs.filter(i=>app.has(i.doc));
+  const pend=invs.filter(i=>!app.has(i.doc));
+  const neto=appr.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
+  document.getElementById('badge-prox').textContent=invs.length;
+
+  if(!invs.length){
+    document.getElementById('proxima-body').innerHTML=`<div class="empty"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay facturas en próxima semana</div>`;
+    return;
+  }
+  let html='';
+  if(pend.length){
+    html+=`<div class="grp"><div class="grp-hdr">
+      <span>Pendientes · ${pend.length}</span>
+      <div class="btn-row">
+        <button class="grp-btn" onclick="returnAllFromProx()"><i class="ti ti-arrow-left"></i> Devolver a esta semana</button>
+        <button class="grp-btn" onclick="approveAllProx()"><i class="ti ti-checks"></i> Aprobar todas</button>
+      </div></div>`;
+    pend.forEach(inv=>{
+      const isCredit=inv.signo>0;
+      html+=`<div class="inv-row prox-row${app.has(inv.doc)?' done':''}">
+        <input type="checkbox" class="inv-check" ${app.has(inv.doc)?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
+        <div style="min-width:0">
+          <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
+          <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
+        </div>
+        <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="bdg ${inv.cl.toLowerCase()}">${inv.cl}</span>
+          <button class="grp-btn" style="padding:2px 7px" onclick="returnFromProx('${inv.doc}')"><i class="ti ti-arrow-left"></i></button>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  if(appr.length){
+    html+=`<div class="grp"><div class="grp-hdr"><span>Aprobadas · ${fm(neto)}</span>
+      <button class="grp-btn red-btn" onclick="unapproveAllProx()"><i class="ti ti-x"></i> Desaprobar</button></div>`;
+    appr.forEach(inv=>{html+=rowHTML(inv,true,true);});
+    html+='</div>';
+  }
+  document.getElementById('proxima-body').innerHTML=html;
+}
+
+function returnFromProx(doc){
+  state.proxima=state.proxima.filter(r=>r.doc!==doc);
+  schedSave();updateBadges();renderProxima();renderAgenda();
+}
+function returnAllFromProx(){
+  if(!confirm('¿Devolver todas las facturas a la agenda de esta semana?'))return;
+  state.proxima=[];schedSave();updateBadges();renderProxima();renderAgenda();
+}
+function approveAllProx(){
+  const s=new Set(state.approved);
+  state.proxima.forEach(i=>s.add(i.doc));
+  state.approved=[...s];schedSave();renderProxima();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+function unapproveAllProx(){
+  const s=new Set(state.approved);
+  state.proxima.forEach(i=>s.delete(i.doc));
+  state.approved=[...s];schedSave();renderProxima();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+
+function updateBadges(){
+  document.getElementById('badge-prox').textContent=state.proxima.length;
+  document.getElementById('badge-rep').textContent=state.approved.length;
+  const agAcs=new Set(Object.keys(state.agenda));
+  const nodef=new Set();
+  state.sap.forEach(r=>{if(!agAcs.has(r.ac)&&!state.userAssignments[r.ac])nodef.add(r.ac);});
+  document.getElementById('badge-nd').textContent=nodef.size;
+}
 
 // ─── SIN SEMANA ───────────────────────────────────────────────────────────────
 function renderNoDef(){
@@ -495,7 +636,7 @@ function renderNoDef(){
       <div style="min-width:0">
         <div class="inv-name">${getName(ac)} <span style="font-size:10px;color:var(--text3);font-weight:400">N° ${ac}</span></div>
         <div class="inv-sub">${invs.length} doc${invs.length>1?'s':''} · ${invs.slice(0,2).map(i=>i.doc).join(', ')}</div>
-        ${ua?`<span class="bdg kd" style="margin-top:4px;display:inline-block">Sem.: ${ua.map(s=>[,'1ra','2da','3ra','4ta','Última'][s]).join(', ')}</span>`:''}
+        ${ua?`<span class="bdg kd" style="margin-top:4px;display:inline-block">Sem.: ${ua.todas?'Todas':ua.sem.map(s=>[,'1ra','2da','3ra','4ta','Última'][s]).join(', ')}</span>`:''}
       </div>
       <div class="inv-amt">${fm(neto)}</div>
       <button class="btn" onclick="openAssign('${ac}')"><i class="ti ti-calendar-plus"></i> Asignar</button>
@@ -503,32 +644,6 @@ function renderNoDef(){
   });
   if(!nodef.size)html=`<div class="empty"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px"></i>Todos los acreedores tienen semana asignada</div>`;
   document.getElementById('nodef-body').innerHTML=html;
-}
-
-// ─── SEMANALES ───────────────────────────────────────────────────────────────
-function renderTodas(){
-  const todas=Object.entries({...state.agenda,...state.userAssignments}).filter(([,v])=>v.todas||v===state.agenda[Object.keys(state.agenda).find(k=>state.agenda[k].todas)]);
-  const todasAcs=[...new Set([
-    ...Object.entries(state.agenda).filter(([,v])=>v.todas).map(([ac])=>ac),
-    ...Object.entries(state.userAssignments).filter(([,v])=>v.todas).map(([ac])=>ac)
-  ])];
-  let html=`<div class="alert-bar"><i class="ti ti-info-circle"></i> Estos proveedores aparecen en todos los jueves del mes automáticamente.</div>`;
-  if(!todasAcs.length){html+=`<div class="empty">No hay proveedores configurados como semanales.<br>Al asignar semana podés marcar "Aparece todas las semanas".</div>`;document.getElementById('todas-body').innerHTML=html;return;}
-  todasAcs.sort((a,b)=>getName(a).localeCompare(getName(b))).forEach(ac=>{
-    const invs=state.sap.filter(r=>r.ac===ac);
-    const neto=invs.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
-    const cbu=getCBU(ac);
-    html+=`<div class="inv-row" style="grid-template-columns:1fr auto auto">
-      <div style="min-width:0">
-        <div class="inv-name">${getName(ac)} <span style="font-size:10px;color:var(--text3);font-weight:400">N° ${ac}</span></div>
-        <div class="inv-sub">${cbu&&cbu!=='VEP'?'CBU: '+cbu.substring(0,16)+'...':cbu==='VEP'?'Pago por VEP':'Sin CBU'}</div>
-        <div class="inv-sub" style="margin-top:2px">${invs.length} docs pendientes · Neto: ${fm(neto)}</div>
-      </div>
-      <span class="bdg kb">Todas</span>
-      <button class="btn" onclick="openAssign('${ac}')"><i class="ti ti-edit"></i></button>
-    </div>`;
-  });
-  document.getElementById('todas-body').innerHTML=html;
 }
 
 // ─── SAP TABLE ───────────────────────────────────────────────────────────────
@@ -539,32 +654,32 @@ function renderSAP(){
   document.getElementById('sap-chips').innerHTML=
     `<button class="chip${sapFilter==='all'?' on':''}" onclick="setSap('all')">Todo</button>`
     +cls.map(c=>`<button class="chip${sapFilter===c?' on':''}" onclick="setSap('${c}')">${c}</button>`).join('');
+
   const rows=state.sap.filter(r=>{
-    const name=getName(r.ac).toLowerCase();
-    const mq=!q||r.ac.includes(q)||r.doc.includes(q)||(r.txt||'').toLowerCase().includes(q)||name.includes(q);
+    const mq=!q||r.ac.includes(q)||r.doc.includes(q)||(r.txt||'').toLowerCase().includes(q)||getName(r.ac).toLowerCase().includes(q);
     return mq&&(sapFilter==='all'||r.cl===sapFilter);
   });
   const neto=rows.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
-  const selInSAP=rows.filter(r=>app.has(r.doc)).length;
+  const selCount=rows.filter(r=>app.has(r.doc)).length;
+
   if(!rows.length){document.getElementById('sap-body').innerHTML=`<div class="empty">Sin resultados</div>`;return;}
 
-  // Action bar
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
     <p style="font-size:12px;color:var(--text2)">${rows.length} docs · Neto: ${fm(neto)}</p>
-    <div style="display:flex;gap:6px;align-items:center">
-      <span style="font-size:12px;color:var(--text2)">${selInSAP} seleccionados</span>
+    <div class="btn-row">
+      <span style="font-size:12px;color:var(--text2);align-self:center">${selCount} sel.</span>
       <button class="btn" onclick="sapSelectAll(true)"><i class="ti ti-checks"></i> Sel. todas</button>
-      <button class="btn" onclick="sapSelectAll(false)"><i class="ti ti-x"></i> Desel. todas</button>
-      <button class="btn prim" onclick="sapAddToReport()" ${selInSAP===0?'style="opacity:.5;pointer-events:none"':''}><i class="ti ti-send"></i> Agregar al reporte</button>
+      <button class="btn" onclick="sapSelectAll(false)"><i class="ti ti-x"></i> Desel.</button>
+      <button class="btn prim" onclick="sapAddToReport()"><i class="ti ti-send"></i> Agregar al reporte</button>
     </div>
   </div>
   <div class="tbl-wrap"><table><thead><tr>
     <th style="width:28px"><input type="checkbox" id="sap-chk-all" onchange="sapSelectAll(this.checked)" style="accent-color:var(--text)"></th>
-    <th style="width:62px">Acreedor</th>
-    <th style="width:160px">Nombre</th>
-    <th style="width:48px">Tipo</th>
-    <th style="width:96px">Documento</th>
-    <th style="width:82px">Fecha</th>
+    <th style="width:60px">Acreedor</th>
+    <th style="width:155px">Nombre</th>
+    <th style="width:46px">Tipo</th>
+    <th style="width:94px">Documento</th>
+    <th style="width:80px">Fecha</th>
     <th>Concepto</th>
     <th style="width:96px;text-align:right">Importe</th>
     <th style="width:55px">Sem.</th>
@@ -572,11 +687,10 @@ function renderSAP(){
 
   rows.forEach(r=>{
     const ag=getAgendaForAc(r.ac);
-    const sems=ag?(ag.todas?['T']:ag.sem):null;
-    const semTxt=sems?(ag.todas?'Todas':sems.map(s=>[,'1°','2°','3°','4°','ú.'][s]).join(',')):'—';
+    const semTxt=ag?(ag.todas?'Todas':ag.sem.map(s=>[,'1°','2°','3°','4°','ú.'][s]).join(',')):'—';
     const isCredit=r.signo>0;
     const checked=app.has(r.doc);
-    html+=`<tr style="${!ag?'opacity:.5':''}" class="${checked?'tr-checked':''}" id="tr-${r.doc}">
+    html+=`<tr class="${checked?'tr-sel':''}" id="tr-${r.doc}">
       <td><input type="checkbox" class="sap-row-chk" data-doc="${r.doc}" ${checked?'checked':''} onchange="sapRowToggle('${r.doc}',this.checked)" style="accent-color:var(--text)"></td>
       <td style="font-family:monospace">${r.ac}</td>
       <td title="${getName(r.ac)}">${getName(r.ac)}</td>
@@ -593,8 +707,6 @@ function renderSAP(){
 }
 function setSap(f){sapFilter=f;renderSAP();}
 
-// SAP checkbox helpers
-let _sapRows=[];
 function getSAPFilteredDocs(){
   const q=(document.getElementById('sap-q')?.value||'').toLowerCase();
   return state.sap.filter(r=>{
@@ -608,63 +720,49 @@ function sapRowToggle(doc,checked){
   state.approved=[...s];
   schedSave();
   document.getElementById('badge-rep').textContent=state.approved.length;
-  // update row highlight without full re-render
   const row=document.getElementById('tr-'+doc);
-  if(row) row.style.background=checked?'color-mix(in srgb,var(--green-bg) 40%,var(--bg2))':'';
-  // update counter in action bar
+  if(row)row.classList.toggle('tr-sel',checked);
+  // update counter
   const app=new Set(state.approved);
-  const visible=getSAPFilteredDocs();
-  const sel=visible.filter(d=>app.has(d)).length;
-  const span=document.querySelector('#sap-body span');
-  if(span) span.textContent=sel+' seleccionados';
-  const addBtn=document.querySelector('#sap-body .btn.prim');
-  if(addBtn) addBtn.style.opacity=sel===0?'.5':'1';
+  const vis=getSAPFilteredDocs();
+  const cnt=vis.filter(d=>app.has(d)).length;
+  const span=document.querySelector('#sap-body .sync-row span, #sap-body span');
+  document.querySelectorAll('#sap-body .btn-row span').forEach(s=>{if(s.textContent.includes('sel'))s.textContent=cnt+' sel.';});
 }
 function sapSelectAll(checked){
   const docs=getSAPFilteredDocs();
   const s=new Set(state.approved);
   docs.forEach(d=>checked?s.add(d):s.delete(d));
   state.approved=[...s];
-  schedSave();
-  renderSAP();
+  schedSave();renderSAP();
   document.getElementById('badge-rep').textContent=state.approved.length;
 }
 function sapAddToReport(){
-  // docs ya están en state.approved, solo navegar al reporte
   switchTab('reporte');
 }
 
-// ─── IMPORTAR DATOS ───────────────────────────────────────────────────────────
+// ─── IMPORTAR ─────────────────────────────────────────────────────────────────
 function setStatus(id,ok,msg){
   const el=document.getElementById(id);
   el.className='upload-status '+(ok?'ok':'err');
   el.textContent=msg;
 }
-
 function parseExcelRows(file,cb){
   const reader=new FileReader();
   reader.onload=ev=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'binary'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      cb(null,rows);
-    }catch(e){cb(e,null);}
+    try{const wb=XLSX.read(ev.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];cb(null,XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));}
+    catch(e){cb(e,null);}
   };
   reader.readAsBinaryString(file);
 }
 
 function importMaestro(e){
-  const file=e.target.files[0]; if(!file)return;
+  const file=e.target.files[0];if(!file)return;
   parseExcelRows(file,(err,rows)=>{
     if(err){setStatus('st-maestro',false,'Error al leer el archivo');return;}
     const maestro={};
-    // Detectar fila de encabezado
-    let start=0;
-    for(let i=0;i<Math.min(5,rows.length);i++){
-      const r=rows[i].map(c=>String(c).toLowerCase());
-      if(r.some(c=>c.includes('acreedor')||c.includes('nombre'))){start=i+1;break;}
-    }
+    // Saltar fila de encabezado (si la primera celda no es numérica)
+    let start=isNaN(parseInt(String(rows[0]?.[0]||'')))?1:0;
     const seen=new Set();
     for(let i=start;i<rows.length;i++){
       const r=rows[i];
@@ -673,60 +771,55 @@ function importMaestro(e){
       seen.add(ac);
       const n=String(r[1]||'').trim();
       const cuit=String(r[2]||'').trim();
-      const cbu=String(r[3]||'').trim().replace(/nan|none/i,'');
-      if(n) maestro[ac]={n,cuit,cbu};
+      const cbu=String(r[3]||'').trim().replace(/^(nan|none)$/i,'');
+      if(n)maestro[ac]={n,cuit,cbu};
     }
     const total=Object.keys(maestro).length;
-    if(!total){setStatus('st-maestro',false,'No se encontraron proveedores. Verificá las columnas.');e.target.value='';return;}
+    if(!total){setStatus('st-maestro',false,'No se encontraron proveedores.');e.target.value='';return;}
     state.maestro=maestro;
-    schedSave();
-    renderDataStatus();
+    schedSave();renderDataStatus();
     setStatus('st-maestro',true,`✓ ${total} proveedores importados`);
     e.target.value='';
   });
 }
 
 function importAgenda(e){
-  const file=e.target.files[0]; if(!file)return;
+  const file=e.target.files[0];if(!file)return;
   parseExcelRows(file,(err,rows)=>{
     if(err){setStatus('st-agenda',false,'Error al leer el archivo');return;}
     const agenda={};
-    let start=0;
-    for(let i=0;i<Math.min(5,rows.length);i++){
-      const r=rows[i].map(c=>String(c).toLowerCase());
-      if(r.some(c=>c.includes('acreedor')||c.includes('semana'))){start=i+1;break;}
-    }
-    for(let i=start;i<rows.length;i++){
+    // Siempre saltar fila 0 (encabezados)
+    for(let i=1;i<rows.length;i++){
       const r=rows[i];
       const ac=String(r[0]||'').trim();
       if(!ac)continue;
-      const semRaw=String(r[1]||'').trim().toLowerCase();
-      if(semRaw==='todas'||semRaw==='all'||semRaw==='1,2,3,4,5'){
+      const semRaw=String(r[1]||'').trim();
+      const semNum=parseInt(semRaw);
+      if(isNaN(semNum))continue;
+      if(semNum===0){
         agenda[ac]={sem:[1,2,3,4,5],todas:true};
-      }else{
-        const sems=semRaw.split(/[,;\s]+/).map(s=>parseInt(s)).filter(s=>s>=1&&s<=5);
-        if(sems.length) agenda[ac]={sem:sems,todas:false};
+      } else if(semNum>=1&&semNum<=5){
+        // Semana 5 (última) se trata especialmente en getSemInvs
+        agenda[ac]={sem:[semNum],todas:false};
       }
     }
     const total=Object.keys(agenda).length;
-    if(!total){setStatus('st-agenda',false,'No se encontraron filas. Verificá columnas: Acreedor, Semana.');e.target.value='';return;}
+    if(!total){setStatus('st-agenda',false,'No se encontraron filas válidas. Verificá que la Col A sea el N° acreedor y la Col B sea 0–5.');e.target.value='';return;}
     state.agenda=agenda;
-    schedSave();
-    renderDataStatus();
-    renderNoDef();
-    renderAgenda();
-    updateAgendaDanger();
+    // Limpiar userAssignments que ya están en la agenda
+    Object.keys(state.agenda).forEach(ac=>{delete state.userAssignments[ac];});
+    schedSave();renderDataStatus();renderNoDef();renderAgenda();
     setStatus('st-agenda',true,`✓ ${total} proveedores en agenda`);
     e.target.value='';
   });
 }
 
 function importSAP(e){
-  const file=e.target.files[0]; if(!file)return;
+  const file=e.target.files[0];if(!file)return;
   parseExcelRows(file,(err,rows)=>{
     if(err){setStatus('st-sap',false,'Error al leer el archivo');return;}
-    const parsed=[];
-    const seen=new Set();
+    const parsed=[];const seen=new Set();
+    // Detectar fila de encabezado
     let start=0;
     for(let i=0;i<Math.min(5,rows.length);i++){
       const r=rows[i].map(c=>String(c).toLowerCase());
@@ -748,95 +841,118 @@ function importSAP(e){
       const key=ac+'|'+doc;
       if(seen.has(key))continue;
       seen.add(key);
-      parsed.push({ac,cl,doc,fecha,imp:Math.abs(imp),signo:imp<0?-1:1,txt});
+      parsed.push({ac,cl,doc,fecha,imp:Math.abs(imp),signo:imp<=0?-1:1,txt});
     }
-    if(!parsed.length){setStatus('st-sap',false,'No se encontraron documentos. Verificá el formato del archivo.');e.target.value='';return;}
+    if(!parsed.length){setStatus('st-sap',false,'No se encontraron documentos. Verificá el formato.');e.target.value='';return;}
 
-    // Verificar saldos netos positivos (empresa en crédito con proveedor)
+    // Alerta saldos netos positivos
     const saldos={};
     parsed.forEach(r=>{saldos[r.ac]=(saldos[r.ac]||0)+(r.signo<0?-r.imp:r.imp);});
     const aFavor=Object.entries(saldos).filter(([,v])=>v>0);
     if(aFavor.length){
       const lista=aFavor.map(([ac,v])=>`• ${getName(ac)} (N°${ac}): $${Math.round(v).toLocaleString('es-AR')}`).join('\n');
-      alert(`⚠️ ATENCIÓN — Saldo neto POSITIVO (empresa en crédito):\n\n${lista}\n\nRevisá notas de crédito o pagos no compensados.`);
+      alert(`⚠️ Saldo neto POSITIVO (empresa en crédito):\n\n${lista}\n\nRevisá si hay notas de crédito o pagos no compensados.`);
     }
 
-    // Limpiar aprobaciones de docs que ya no existen
+    // Limpiar aprobaciones que ya no existen en el nuevo SAP
     const docSet=new Set(parsed.map(r=>r.doc));
     state.approved=state.approved.filter(d=>docSet.has(d));
+    // También limpiar proxima que ya no existen
+    state.proxima=state.proxima.filter(r=>docSet.has(r.doc));
 
     state.sap=parsed;
-    schedSave();
-    renderDataStatus();
-    renderSAP();
-    renderAgenda();
-    renderNoDef();
-    updateSAPDanger();
+    schedSave();renderDataStatus();renderSAP();renderAgenda();renderNoDef();updateBadges();
+
     const neg=parsed.filter(r=>r.signo<0).length;
     const pos=parsed.filter(r=>r.signo>0).length;
-    setStatus('st-sap',true,`✓ ${parsed.length} docs: ${neg} a pagar · ${pos} NC/compensaciones`);
+    setStatus('st-sap',true,`✓ ${parsed.length} docs: ${neg} a pagar · ${pos} NC/comp.`);
     e.target.value='';
   });
 }
 
+// Eliminar datos
+function deleteMaestro(){
+  if(!confirm('¿Eliminar el Maestro de Proveedores? Los nombres y CBUs dejarán de mostrarse.'))return;
+  state.maestro={};schedSave();renderDataStatus();
+  setStatus('st-maestro',true,'Maestro eliminado.');
+}
+function deleteAgenda(){
+  if(!confirm('¿Eliminar la agenda de pagos y las asignaciones manuales?'))return;
+  state.agenda={};state.userAssignments={};schedSave();renderDataStatus();renderAgenda();renderNoDef();
+  setStatus('st-agenda',true,'Agenda eliminada.');
+}
 function deleteSAP(){
-  if(!confirm('¿Eliminar todos los datos del reporte SAP? Las aprobaciones también se borrarán.'))return;
+  if(state.proxima.length>0){
+    document.getElementById('delete-sap-modal').classList.add('open');
+  } else {
+    if(!confirm('¿Eliminar todos los datos del reporte SAP?'))return;
+    doDeleteSAP(false);
+  }
+}
+function closeSAPDeleteModal(){document.getElementById('delete-sap-modal').classList.remove('open');}
+function confirmDeleteSAP(){
+  const opt=document.querySelector('input[name="prox-opt"]:checked')?.value;
+  doDeleteSAP(opt==='remove');
+  closeSAPDeleteModal();
+}
+function doDeleteSAP(removeProxima){
   state.sap=[];
   state.approved=[];
-  schedSave();
-  renderDataStatus();
-  renderAgenda();
-  renderNoDef();
-  updateSAPDanger();
-  setStatus('st-sap',true,'Datos SAP eliminados. Podés importar uno nuevo.');
+  if(removeProxima)state.proxima=[];
+  schedSave();renderDataStatus();renderAgenda();renderNoDef();updateBadges();
+  setStatus('st-sap',true,removeProxima?'Datos SAP y Próxima semana eliminados.':'Datos SAP eliminados. Las facturas de Próxima semana se mantienen.');
 }
 
-function updateSAPDanger(){
-  const d=document.getElementById('sap-danger');
-  if(!d)return;
-  if(state.sap.length){d.style.display='flex';document.getElementById('sap-count').textContent=state.sap.length;}
-  else{d.style.display='none';}
+function updateDangers(){
+  // SAP
+  const sapD=document.getElementById('sap-danger');
+  if(sapD){if(state.sap.length){sapD.style.display='flex';document.getElementById('sap-count').textContent=state.sap.length;}else sapD.style.display='none';}
+  // Agenda
+  const agD=document.getElementById('agenda-danger');
+  const agCount=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
+  if(agD){if(agCount){agD.style.display='flex';document.getElementById('agenda-count').textContent=agCount;}else agD.style.display='none';}
+  // Maestro
+  const mD=document.getElementById('maestro-danger');
+  const mCount=Object.keys(state.maestro).length;
+  if(mD){if(mCount){mD.style.display='flex';document.getElementById('maestro-count').textContent=mCount;}else mD.style.display='none';}
 }
 
 function renderDataStatus(){
-  updateSAPDanger();
-  updateAgendaDanger();
-  const mCount=Object.keys(state.maestro).length;
-  const aCount=Object.keys(state.agenda).length;
-  const sCount=state.sap.length;
+  updateDangers();
+  const mC=Object.keys(state.maestro).length;
+  const aC=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
+  const sC=state.sap.length;
   document.getElementById('data-status').innerHTML=`
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-users"></i> Maestro</div><div class="stat-val c-blue">${mCount}</div><div style="font-size:11px;color:var(--text2)">${mCount?'proveedores':'Sin cargar'}</div></div>
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-calendar"></i> Agenda</div><div class="stat-val c-amber">${aCount}</div><div style="font-size:11px;color:var(--text2)">${aCount?'configurados':'Sin cargar'}</div></div>
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-file-invoice"></i> SAP</div><div class="stat-val c-green">${sCount}</div><div style="font-size:11px;color:var(--text2)">${sCount?'documentos':'Sin cargar'}</div></div>`;
+    <div class="stat"><div class="stat-lbl"><i class="ti ti-users"></i> Maestro</div><div class="stat-val c-blue">${mC}</div><div style="font-size:11px;color:var(--text2)">${mC?'proveedores':'Sin cargar'}</div></div>
+    <div class="stat"><div class="stat-lbl"><i class="ti ti-calendar"></i> Agenda</div><div class="stat-val c-amber">${aC}</div><div style="font-size:11px;color:var(--text2)">${aC?'configurados':'Sin cargar'}</div></div>
+    <div class="stat"><div class="stat-lbl"><i class="ti ti-file-invoice"></i> SAP</div><div class="stat-val c-green">${sC}</div><div style="font-size:11px;color:var(--text2)">${sC?'documentos':'Sin cargar'}</div></div>`;
 }
 
 // ─── REPORTE ─────────────────────────────────────────────────────────────────
 function renderReporte(){
   const app=approvedSet();
-  const apprInvs=state.sap.filter(r=>app.has(r.doc));
-  const neto=apprInvs.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
+  const apprInvs=[...state.sap,...state.proxima].filter(r=>app.has(r.doc));
+  // Dedup by doc
+  const seen=new Set();const uniq=apprInvs.filter(r=>{if(seen.has(r.doc))return false;seen.add(r.doc);return true;});
+  const neto=uniq.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
   const thu=thursdays[activeWeekIdx];
-  if(!apprInvs.length){
+  if(!uniq.length){
     document.getElementById('rep-body').innerHTML=`<div class="empty"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px"></i>Aprobá documentos en la agenda para generar el reporte</div>`;
     return;
   }
   let html=`<div class="rep-actions">
-    <p style="font-size:13px;color:var(--text2)">Jueves ${fd(thu)} · ${apprInvs.length} docs · Neto: <strong>${fm(neto)}</strong></p>
+    <p style="font-size:13px;color:var(--text2)">Jueves ${fd(thu)} · ${uniq.length} docs · Neto: <strong>${fm(neto)}</strong></p>
     <div class="btn-row">
       <button class="btn" onclick="copyRep()"><i class="ti ti-copy"></i> Copiar</button>
       <button class="btn prim" onclick="downloadCSV()"><i class="ti ti-download"></i> Descargar CSV</button>
     </div>
   </div>
   <div class="tbl-wrap"><table><thead><tr>
-    <th style="width:62px">N° Prov.</th>
-    <th style="width:160px">Nombre</th>
-    <th style="width:48px">Tipo</th>
-    <th style="width:96px">N° Doc.</th>
-    <th>Concepto</th>
-    <th style="width:150px">CBU</th>
+    <th style="width:62px">N° Prov.</th><th style="width:160px">Nombre</th><th style="width:46px">Tipo</th>
+    <th style="width:96px">N° Doc.</th><th>Concepto</th><th style="width:150px">CBU</th>
     <th style="width:100px;text-align:right">Importe</th>
   </tr></thead><tbody>`;
-  apprInvs.forEach(r=>{
+  uniq.forEach(r=>{
     const cbu=getCBU(r.ac);
     const isCredit=r.signo>0;
     html+=`<tr style="${isCredit?'color:var(--green)':''}">
@@ -855,15 +971,18 @@ function renderReporte(){
 
 function copyRep(){
   const app=approvedSet();
+  const seen=new Set();
   const lines=['N° Proveedor\tNombre\tTipo doc\tN° Documento\tConcepto\tCBU\tIMPORTE ARS'];
-  state.sap.filter(r=>app.has(r.doc)).forEach(r=>lines.push(`${r.ac}\t${getName(r.ac)}\t${r.cl}\t${r.doc}\t${r.txt||''}\t${getCBU(r.ac)}\t${r.signo<0?Math.round(r.imp):-Math.round(r.imp)}`));
+  [...state.sap,...state.proxima].filter(r=>{if(!app.has(r.doc)||seen.has(r.doc))return false;seen.add(r.doc);return true;})
+    .forEach(r=>lines.push(`${r.ac}\t${getName(r.ac)}\t${r.cl}\t${r.doc}\t${r.txt||''}\t${getCBU(r.ac)}\t${r.signo<0?Math.round(r.imp):-Math.round(r.imp)}`));
   navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Copiado. Pegá con Ctrl+V en Excel.'));
 }
-
 function downloadCSV(){
   const app=approvedSet();
+  const seen=new Set();
   const lines=['\ufeffN° Proveedor,Nombre,Tipo doc,N° Documento,Concepto,CBU,Importe ARS'];
-  state.sap.filter(r=>app.has(r.doc)).forEach(r=>lines.push(`"${r.ac}","${getName(r.ac)}","${r.cl}","${r.doc}","${(r.txt||'').replace(/"/g,"'")}","${getCBU(r.ac)}","${r.signo<0?Math.round(r.imp):-Math.round(r.imp)}"`));
+  [...state.sap,...state.proxima].filter(r=>{if(!app.has(r.doc)||seen.has(r.doc))return false;seen.add(r.doc);return true;})
+    .forEach(r=>lines.push(`"${r.ac}","${getName(r.ac)}","${r.cl}","${r.doc}","${(r.txt||'').replace(/"/g,"'")}","${getCBU(r.ac)}","${r.signo<0?Math.round(r.imp):-Math.round(r.imp)}"`));
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`reporte_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(url);
@@ -878,86 +997,31 @@ function openAssign(ac){
   document.getElementById('todas-check').checked=cur?.todas||false;
   document.getElementById('sem-grid').innerHTML=[1,2,3,4,5].map(s=>`
     <button class="sem-btn${assignSels.includes(s)?' sel':''}" data-sem="${s}" onclick="toggleSem(${s})">
-      ${s}° jue<br><span style="font-size:10px;opacity:.7">${thursdays[s-1]?fd(thursdays[s-1]):s+'°'}</span>
+      ${s===5?'Última':s+'° jue'}<br><span style="font-size:10px;opacity:.7">${thursdays[s-1]?fd(thursdays[s-1]):'—'}</span>
     </button>`).join('');
   document.getElementById('assign-modal').classList.add('open');
 }
-
 function toggleSem(s){
   assignSels=assignSels.includes(s)?assignSels.filter(x=>x!==s):[...assignSels,s];
-  document.querySelectorAll('#sem-grid .sem-btn').forEach(btn=>{
-    btn.classList.toggle('sel',assignSels.includes(parseInt(btn.dataset.sem)));
-  });
+  document.querySelectorAll('#sem-grid .sem-btn').forEach(btn=>btn.classList.toggle('sel',assignSels.includes(parseInt(btn.dataset.sem))));
 }
-
 function saveAssign(){
   if(!assignTarget)return;
   const todas=document.getElementById('todas-check').checked;
   const entry=todas?{sem:[1,2,3,4,5],todas:true}:{sem:[...assignSels].sort(),todas:false};
-  if(entry.sem.length||todas){
-    state.userAssignments[assignTarget]=entry;
-    // Si viene de agenda también lo actualiza ahí
-    if(state.agenda[assignTarget]) state.agenda[assignTarget]=entry;
-  }
-  closeModal();schedSave();renderNoDef();renderAgenda();renderTodas();
+  if(entry.sem.length||todas){state.userAssignments[assignTarget]=entry;}
+  closeModal();schedSave();renderNoDef();renderAgenda();updateBadges();
 }
-
 function closeModal(){document.getElementById('assign-modal').classList.remove('open');assignTarget=null;assignSels=[];}
-
-// ─── PASAR A PRÓXIMA SEMANA ───────────────────────────────────────────────────
-function sendToNextWeek(){
-  const invs=getSemInvs();
-  const pend=invs.filter(i=>!approvedSet().has(i.doc));
-  if(!pend.length){alert('No hay facturas pendientes para pasar.');return;}
-  if(!confirm(`¿Pasar ${pend.length} factura${pend.length>1?'s':''} pendiente${pend.length>1?'s':''} a la próxima semana?`))return;
-  const nextSem=activeWeekIdx+2; // 1-indexed next
-  if(nextSem>5){alert('Ya estás en la última semana del mes. No hay semana siguiente.');return;}
-  pend.forEach(inv=>{
-    const ag=getAgendaForAc(inv.ac);
-    if(!ag)return;
-    // Agregar la semana siguiente al proveedor si no la tiene
-    const sems=new Set(ag.sem||[]);
-    sems.add(nextSem);
-    const updated={...ag,sem:[...sems].sort()};
-    // Guardar en userAssignments para no pisar la agenda base
-    state.userAssignments[inv.ac]=updated;
-  });
-  schedSave();
-  renderAgenda();
-  renderNoDef();
-  alert(`✓ ${pend.length} proveedor${pend.length>1?'es':''} agregado${pend.length>1?'s':''} también a la semana ${nextSem}.`);
-}
-
-// ─── ELIMINAR AGENDA ──────────────────────────────────────────────────────────
-function deleteAgenda(){
-  if(!confirm('¿Eliminar la agenda de pagos? Las asignaciones manuales también se borrarán.'))return;
-  state.agenda={};
-  state.userAssignments={};
-  schedSave();
-  renderDataStatus();
-  renderAgenda();
-  renderNoDef();
-  renderTodas();
-  updateAgendaDanger();
-  setStatus('st-agenda',true,'Agenda eliminada. Podés importar una nueva.');
-}
-
-function updateAgendaDanger(){
-  const d=document.getElementById('agenda-danger');
-  if(!d)return;
-  const count=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
-  if(count>0){d.style.display='flex';document.getElementById('agenda-count').textContent=count;}
-  else{d.style.display='none';}
-}
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function initUI(){
   rebuildThursdays();
   renderMonthUI();
   renderNoDef();
+  updateBadges();
   renderDataStatus();
 }
-
 loadCloud();
 </script>
 </body>
