@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuentas a Pagar — Los Andes</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f7f4;--bg2:#ffffff;--bg3:#f0eee9;
+  --text:#1a1a18;--text2:#6b6b65;--text3:#9b9b94;
+  --border:#e0ddd6;--border2:#ccc9c0;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --green:#3B6D11;--green-bg:#EAF3DE;--green-border:#97C459;
+  --amber:#854F0B;--amber-bg:#FAEEDA;
+  --red:#A32D2D;--red-bg:#FCEBEB;--red-border:#F7C1C1;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1b18;--bg2:#252420;--bg3:#2e2d29;
+    --text:#e8e6e0;--text2:#9b9991;--text3:#6b6965;
+    --border:#3a3830;--border2:#4a4840;
+    --blue:#85B7EB;--blue-bg:#0c2d4a;
+    --green:#97C459;--green-bg:#1a2e0a;--green-border:#3B6D11;
+    --amber:#EF9F27;--amber-bg:#3a2608;
+    --red:#F09595;--red-bg:#3a1010;--red-border:#791F1F;
+  }
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* Layout */
+.app{max-width:900px;margin:0 auto;padding:16px}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.topbar h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
+.topbar-meta{font-size:13px;color:var(--text2);margin-top:3px}
+.sync-status{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.sync-dot.saving{background:var(--amber);animation:pulse .8s infinite}
+.sync-dot.offline{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Setup screen */
+.setup{max-width:480px;margin:60px auto;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px}
+.setup h2{font-size:18px;font-weight:600;margin-bottom:8px}
+.setup p{color:var(--text2);font-size:13px;margin-bottom:20px;line-height:1.6}
+.setup .step{display:flex;gap:12px;margin-bottom:16px;align-items:flex-start}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;line-height:1.5}
+.step-text a{color:var(--blue);text-decoration:none}
+.step-text a:hover{text-decoration:underline}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;gap:0}
+.tab{padding:9px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-family:inherit}
+.tab.active{color:var(--text);border-bottom-color:var(--text);font-weight:500}
+.tab:hover:not(.active){color:var(--text)}
+.section{display:none}.section.active{display:block}
+
+/* Month nav */
+.month-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.month-nav button{border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;cursor:pointer;background:var(--bg2);color:var(--text);font-size:13px}
+.month-nav button:hover{background:var(--bg3)}
+.month-label{font-size:15px;font-weight:600;flex:1}
+.week-nav{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap}
+.wk-btn{border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;background:none;color:var(--text2);font-family:inherit}
+.wk-btn.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.wk-btn.today{border-color:var(--blue);color:var(--blue)}
+.wk-btn:hover:not(.active){background:var(--bg3)}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.stat-lbl{font-size:11px;color:var(--text2);margin-bottom:3px}
+.stat-val{font-size:18px;font-weight:600}
+.green{color:var(--green)}.amber{color:var(--amber)}.blue{color:var(--blue)}
+
+/* Invoice rows */
+.grp{margin-bottom:16px}
+.grp-hdr{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grp-btn{font-size:11px;padding:3px 9px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:none;color:var(--text2);font-family:inherit}
+.grp-btn:hover{background:var(--bg3)}
+.grp-btn.red{color:var(--red);border-color:var(--red-border)}
+.grp-btn.red:hover{background:var(--red-bg)}
+.inv-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;margin-bottom:5px;display:grid;grid-template-columns:18px 1fr auto auto;gap:10px;align-items:center;transition:border-color .15s}
+.inv-row:hover{border-color:var(--border2)}
+.inv-row.done{border-color:var(--green-border);background:color-mix(in srgb,var(--green-bg) 40%,var(--bg2))}
+.inv-row.nodef-row{border-left:3px solid var(--amber)}
+.inv-check{cursor:pointer;width:15px;height:15px;accent-color:var(--text);flex-shrink:0}
+.inv-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-sub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-amt{font-size:12px;font-weight:600;white-space:nowrap;font-family:monospace;text-align:right}
+.badge{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.kb{background:var(--blue-bg);color:var(--blue)}
+.ks{background:var(--amber-bg);color:var(--amber)}
+.kd,.k3{background:var(--green-bg);color:var(--green)}
+.kt,.kr{background:var(--red-bg);color:var(--red)}
+.ps{background:var(--amber-bg);color:var(--amber)}
+
+/* Alerts */
+.alert-bar{background:var(--amber-bg);border-left:3px solid var(--amber);border-radius:0 var(--radius) var(--radius) 0;padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:10px}
+
+/* Search */
+.search-row{display:flex;gap:8px;margin-bottom:8px}
+input[type=text],select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);font-family:inherit;width:100%}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--blue)}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:11px;color:var(--text2);background:none;font-family:inherit}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* SAP Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-weight:500;font-size:11px;color:var(--text2);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+tr:hover td{background:var(--bg3)}
+tfoot td{font-weight:600;background:var(--bg3);border-top:1px solid var(--border2)}
+
+/* Buttons */
+.btn{border:1px solid var(--border);border-radius:var(--radius);padding:7px 13px;font-size:12px;cursor:pointer;background:var(--bg2);color:var(--text);font-family:inherit;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--bg3)}
+.btn.prim{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn.prim:hover{opacity:.85}
+.btn-row{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;width:380px;max-width:100%}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:16px}
+.sem-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:20px}
+.sem-btn{border:1px solid var(--border);border-radius:var(--radius);padding:10px 4px;cursor:pointer;font-size:12px;background:var(--bg2);color:var(--text2);text-align:center;transition:all .1s;font-family:inherit}
+.sem-btn.sel{background:var(--text);color:var(--bg);border-color:var(--text)}
+.sem-btn:hover:not(.sel){background:var(--bg3)}
+.modal-btns{display:flex;gap:6px;justify-content:flex-end}
+
+/* JSONBin config */
+.config-bar{background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.config-bar input{width:220px;flex-shrink:0}
+.empty{text-align:center;padding:2rem;color:var(--text2);font-size:13px}
+
+/* Report */
+.rep-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.rep-meta{font-size:13px;color:var(--text2)}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius-lg);padding:28px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color .15s}
+.upload-zone:hover{border-color:var(--blue)}
+.upload-zone input{display:none}
+
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .inv-row{grid-template-columns:18px 1fr auto}
+  .inv-row .badge{display:none}
+  .topbar{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- Config bar (mostrada si no hay BIN ID) -->
+<div class="config-bar" id="config-bar" style="display:none">
+  <i class="ti ti-cloud-off"></i>
+  <span>Para guardar datos en la nube, ingresá tu JSONBin ID:</span>
+  <input type="text" id="bin-id-input" placeholder="ej: 6856a1234abc..." style="width:220px">
+  <input type="text" id="bin-key-input" placeholder="X-Master-Key..." style="width:220px">
+  <button class="btn prim" onclick="saveConfig()">Conectar</button>
+  <a href="https://jsonbin.io" target="_blank" class="btn">Crear cuenta gratis</a>
+</div>
+
+<div class="topbar">
+  <div>
+    <h1>Cuentas a pagar</h1>
+    <p class="topbar-meta" id="top-meta">Cargando...</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Local</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="switchTab('sap')"><i class="ti ti-table"></i> SAP</button>
+      <button class="btn prim" onclick="switchTab('reporte')"><i class="ti ti-send"></i> Reporte</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('agenda')"><i class="ti ti-calendar-week"></i> Agenda</button>
+  <button class="tab" onclick="switchTab('nodef')"><i class="ti ti-clock-question"></i> Sin semana <span id="badge-nd" style="background:var(--amber-bg);color:var(--amber);font-size:10px;padding:1px 6px;border-radius:20px;margin-left:3px">0</span></button>
+  <button class="tab" onclick="switchTab('todas')"><i class="ti ti-refresh"></i> Semanales</button>
+  <button class="tab" onclick="switchTab('sap')"><i class="ti ti-file-invoice"></i> SAP</button>
+  <button class="tab" onclick="switchTab('reporte')"><i class="ti ti-file-export"></i> Reporte <span id="badge-rep" style="background:var(--blue-bg);color:var(--blue);font-size:10px;padding:1px 6px;border-radius:20px;margin-left:3px">0</span></button>
+</div>
+
+<!-- AGENDA -->
+<div id="tab-agenda" class="section active">
+  <div class="month-nav">
+    <button onclick="prevMonth()"><i class="ti ti-chevron-left"></i></button>
+    <span class="month-label" id="month-label"></span>
+    <button onclick="nextMonth()"><i class="ti ti-chevron-right"></i></button>
+  </div>
+  <div class="week-nav" id="week-nav"></div>
+  <div class="stats" id="stats"></div>
+  <div id="agenda-body"></div>
+</div>
+
+<!-- NO DEFINIDOS -->
+<div id="tab-nodef" class="section">
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Facturas SAP sin semana asignada. Asigná en qué jueves se pagan.</p>
+  <div id="nodef-body"></div>
+</div>
+
+<!-- TODAS LAS SEMANAS -->
+<div id="tab-todas" class="section">
+  <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Proveedores que aparecen en todos los jueves del mes.</p>
+  <div id="todas-body"></div>
+</div>
+
+<!-- SAP -->
+<div id="tab-sap" class="section">
+  <div class="upload-zone" onclick="document.getElementById('sap-file').click()">
+    <input type="file" id="sap-file" accept=".xlsx,.xls,.csv" onchange="handleSAPUpload(event)">
+    <i class="ti ti-upload" style="font-size:24px;color:var(--text3);display:block;margin-bottom:6px"></i>
+    <p style="font-size:14px;font-weight:500">Importar nuevo reporte SAP</p>
+    <p style="font-size:12px;color:var(--text2);margin-top:4px">El sistema usa el reporte del 25/6 cargado — subí uno nuevo para actualizar</p>
+  </div>
+  <div class="search-row">
+    <input type="text" id="sap-q" placeholder="Buscar acreedor, documento, texto..." oninput="renderSAP()">
+  </div>
+  <div class="chips" id="sap-chips"></div>
+  <div class="tbl-wrap" id="sap-body"></div>
+</div>
+
+<!-- REPORTE -->
+<div id="tab-reporte" class="section">
+  <div id="rep-body"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- Modal asignar semana -->
+<div class="modal-bg" id="assign-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Asignar semana de pago</h3>
+    <p class="modal-sub" id="assign-name"></p>
+    <p style="font-size:12px;font-weight:500;margin-bottom:8px">Semana(s) del mes:</p>
+    <div class="sem-grid" id="sem-grid"></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn prim" onclick="saveAssign()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATOS ───────────────────────────────────────────────────────────────────
+
+const MAESTRO = {"21":{n:"INST. VERIFICADOR DE CIRCULACIONES",cbu:"0150503002000001401668"},"55":{n:"Agencia Efe S A",cbu:"0720203420000000013318"},"168":{n:"ADEPA",cbu:"0070236420000006646224"},"1339":{n:"Swiss Medical S A",cbu:"2850540430000403766012"},"1606":{n:"TELEFONICA MOVILES ARGENTINA S.A",cbu:"2850930730009288011006"},"2042":{n:"OSDE",cbu:"0070327520000007286793"},"4558":{n:"SD - Technology S.R.L.",cbu:"0070335020000001151695"},"12876":{n:"TELMEX ARGENTINA S.A",cbu:"0168888100008178060310"},"16786":{n:"Ifx Networks Argentina Srl",cbu:""},"29879":{n:"LIFE - Seguro Colectivo Vida",cbu:"0150931502000003365513"},"35955":{n:"A.D.I.R.A.",cbu:"0170182720000000062693"},"46826":{n:"SINDICATO VENDEDORES DIARIOS",cbu:"0110628820062800140353"},"52664":{n:"Fantini Claudio Osvaldo",cbu:"0720216488000032181672"},"600031":{n:"TELECOM ARGENTINA S.A",cbu:"0720000720000002157586"},"600144":{n:"EDEMSA",cbu:"1910115855011559786996"},"600209":{n:"ECOGAS",cbu:"0070081820000006852944"},"600864":{n:"AYSAM",cbu:"0150516002000105030148"},"700238":{n:"Municipalidad de Mendoza",cbu:"VEP"},"979832":{n:"Arnaldo Chapini S.R.L.",cbu:"0170484020000000016706"},"985628":{n:"Broda S.A. (viandas)",cbu:"0270034210043919210019"},"987309":{n:"Biluron Fernando Daniel",cbu:"0270034220001412540036"},"987543":{n:"Creative Media Arg S.A.S.",cbu:"0070199620000006310499"},"987879":{n:"Quina Braian Ivan",cbu:"0070025230004032401908"},"987933":{n:"Hiberus",cbu:"2540000911000005756210"},"987977":{n:"Salatino Maria Consuelo",cbu:"0110478730047837483933"},"988199":{n:"Estefan Roger",cbu:"0070246330004013559341"},"988251":{n:"Hipercubo SA",cbu:"0150929202000100729704"},"988312":{n:"Rez Masud Laura",cbu:"0270066320005475700015"},"988422":{n:"Cooperativa Bio Clean",cbu:"0270077910053264840030"},"988436":{n:"Artal Conte Nicolas Andres",cbu:"0440016540000325813725"},"988442":{n:"Cerdan Maria Rosana",cbu:"0720708488000002536640"},"988443":{n:"Sanchez Ariel Andres",cbu:"0070225830004008391714"},"988523":{n:"Abaco Informatica S.A.",cbu:"0170077020000030095342"},"988530":{n:"AVALIAN SALUD Y BIENESTAR",cbu:"2850761530094211743631"},"988539":{n:"Ulman Pablo Ariel",cbu:"0340024108240144115002"},"988547":{n:"LE-MAR SA (distribucion)",cbu:"0070081820000020877004"},"988590":{n:"Aguilera Gerardo Daniel",cbu:"0070081820000013174475"},"988616":{n:"ACTIVETA AGENCY SAS",cbu:"0720361720000000802440"},"988697":{n:"JM COMPANY (Seguridad)",cbu:"2850573230094249667721"},"988702":{n:"B-ASTIE FILMS S.A.S.",cbu:""},"988703":{n:"MIMESIS SAS",cbu:""},"953935":{n:"Flores Franco Daniel",cbu:"0110842030084200750229"},"953987":{n:"Gonzalez Gustavo Ariel",cbu:"2850415940094757541158"},"956024":{n:"Segura Piozzini Omar Alfredo",cbu:"0270095320026749190024"},"958089":{n:"Flores Jesus Ricardo",cbu:"0110635630063503478601"},"958993":{n:"Cohn Victor Daniel",cbu:"0070300830004023475361"},"959291":{n:"Fievet Javier Armando",cbu:"0720229488000037809818"},"959345":{n:"Dalla Torre Juan Pablo",cbu:"0150516001000143826519"},"959657":{n:"Flores Alejandro Angel",cbu:"2850402940094673881718"},"960220":{n:"Flores Cristian German",cbu:"0070310730004013993901"},"961058":{n:"Suarez Fernando Adrian",cbu:"0170285140000032199695"},"962167":{n:"Hidalgo Ernesto Hugo",cbu:"0110285930028517184683"},"963509":{n:"Pino Gaston David",cbu:"1910323955132300465617"},"967290":{n:"Redondo Horacio Alejandro",cbu:"0110629530062915640279"},"968683":{n:"Illanes Gaston Ceferino",cbu:"0150516001000138207268"}};
+
+const NODEF_NAMES = {"951178":"PROSSETTI CARLOS ENRIQUE","952848":"TELLO ALEJANDRO DAVID","956755":"Ferrari Horacio Ruben","963864":"Aramayo Lara Javier Flavio","963925":"Camargo Raul Isidro","966428":"Olmedo Luis Ernesto","966554":"Salanitri Salvador Carmelo","966926":"Rodriguez Pena Gustavo Federico","967524":"Villegas Jorge Omar","968101":"Lucangeli Vicente Natalio","978895":"Gonzalez David Arturo","979027":"Castellan Richard Fabian Dario","979745":"Rodriguez Roberto Alfredo","981744":"Marchiori Rodolfo Jose","983015":"Mitre Edith Adelaida","984111":"Cardenas Miguel Angel"};
+
+const AGENDA_DEFAULT = {"700238":{sem:[1,2,3,4,5],todas:true},"600864":{sem:[1,2,3,4,5],todas:true},"600209":{sem:[1,2,3,4,5],todas:true},"600144":{sem:[1,2,3,4,5],todas:true},"600031":{sem:[1,2,3,4,5],todas:true},"979832":{sem:[1,2,3,4,5],todas:true},"21":{sem:[4,5]},"55":{sem:[4]},"168":{sem:[2]},"1339":{sem:[2]},"1606":{sem:[1,2]},"2042":{sem:[2]},"4558":{sem:[3]},"12876":{sem:[2]},"16786":{sem:[3]},"29879":{sem:[1]},"35955":{sem:[2]},"46826":{sem:[4]},"52664":{sem:[2]},"985628":{sem:[5]},"987309":{sem:[3]},"987543":{sem:[3]},"987879":{sem:[3]},"987933":{sem:[5]},"987977":{sem:[3]},"988199":{sem:[2]},"988251":{sem:[3,4]},"988312":{sem:[2]},"988422":{sem:[3]},"988436":{sem:[4]},"988442":{sem:[4]},"988443":{sem:[4]},"988523":{sem:[3]},"988530":{sem:[2]},"988539":{sem:[3]},"988547":{sem:[2]},"988590":{sem:[2,4]},"988616":{sem:[3]},"988697":{sem:[3]},"988702":{sem:[5]},"988703":{sem:[5]},"953935":{sem:[4]},"953987":{sem:[4]},"956024":{sem:[4]},"958089":{sem:[4]},"958993":{sem:[3,4]},"959291":{sem:[4]},"959345":{sem:[4]},"959657":{sem:[4]},"960220":{sem:[4]},"961058":{sem:[4]},"962167":{sem:[4]},"963509":{sem:[4]},"967290":{sem:[4]},"968683":{sem:[4]}};
+
+const SAP_BUILTIN = [{"ac":"21","cl":"KB","doc":"1100081262","fecha":"2026-01-28","imp":40800,"txt":"IVC - cuota mensual 01/2026"},{"ac":"21","cl":"KB","doc":"1100081590","fecha":"2026-02-26","imp":42000,"txt":"IVC - cuota mensual 02/2026"},{"ac":"21","cl":"KB","doc":"1100082378","fecha":"2026-05-28","imp":43700,"txt":"IVC - cuota mensual 05/2026"},{"ac":"55","cl":"KB","doc":"1100082671","fecha":"2026-06-01","imp":966000,"txt":"Agencia Efe - Grafico general 06/2026"},{"ac":"168","cl":"KB","doc":"1100082608","fecha":"2026-06-02","imp":388600,"txt":"ADEPA - CUOTA 06/2026"},{"ac":"1339","cl":"KB","doc":"1100082445","fecha":"2026-05-04","imp":4117285,"txt":"Servicios Medicos Asistenciales 05/2026"},{"ac":"1339","cl":"KB","doc":"1100082680","fecha":"2026-06-03","imp":4640890,"txt":"Servicios Medicos Asistenciales 06/2026"},{"ac":"1606","cl":"KB","doc":"1100082473","fecha":"2026-05-25","imp":2674701,"txt":"MOVISTAR - Huawei Cloud - 05/26"},{"ac":"1606","cl":"KB","doc":"1100082484","fecha":"2026-06-06","imp":44492,"txt":"MOVISTAR - Fijos - 06/2026"},{"ac":"2042","cl":"KS","doc":"2800010265","fecha":"2026-05-31","imp":3806612,"txt":"Talon obligatorios 05/2026 vto 16/06"},{"ac":"4558","cl":"KB","doc":"1100082389","fecha":"2026-05-19","imp":242000,"txt":"Dcho de uso sist vta 05/2026"},{"ac":"4558","cl":"KB","doc":"1100082458","fecha":"2026-05-19","imp":3146000,"txt":"Implementacion Receptoria virtual 05/2026"},{"ac":"12876","cl":"KB","doc":"1100082464","fecha":"2026-06-04","imp":1105919,"txt":"Telmex - serv 06/2026"},{"ac":"16786","cl":"KB","doc":"1100082605","fecha":"2026-06-01","imp":1474658,"txt":"LICENCIAS MICROSOFT - 06/2026"},{"ac":"29879","cl":"PS","doc":"1100082629","fecha":"2026-05-28","imp":191443,"txt":"Seguro Colectivo de Vida 04/2026"},{"ac":"35955","cl":"KB","doc":"1100082609","fecha":"2026-06-02","imp":273500,"txt":"ADIRA - CUOTA SOCIAL 06/2026"},{"ac":"46826","cl":"KB","doc":"1100082602","fecha":"2026-06-09","imp":700000,"txt":"Sindicato Vendedores Diarios 06/2026"},{"ac":"46826","cl":"KS","doc":"2800010253","fecha":"2026-05-31","imp":5465466,"txt":"Retenciones sindicato 05/2026"},{"ac":"52664","cl":"KB","doc":"1100082401","fecha":"2026-06-01","imp":100000,"txt":"RED - Honorarios 05/2026"},{"ac":"600031","cl":"KB","doc":"1100082456","fecha":"2026-05-22","imp":2258679,"txt":"TELECOM 05/2026 - DATOS ENLACE"},{"ac":"600144","cl":"KT","doc":"3600002189","fecha":"2026-06-02","imp":4613257,"txt":"EDEMSA - vto 16.06.2026"},{"ac":"600864","cl":"KT","doc":"3600002187","fecha":"2026-05-12","imp":1420284,"txt":"AYSAM - cuota 2"},{"ac":"700238","cl":"KS","doc":"2800010329","fecha":"2026-06-15","imp":186875,"txt":"Municipalidad 06/2026 vto 18/06"},{"ac":"700238","cl":"KS","doc":"2800010330","fecha":"2026-06-15","imp":700195,"txt":"Municipalidad 06/2026 vto 18/06"},{"ac":"979832","cl":"KB","doc":"1100082682","fecha":"2026-06-19","imp":646619,"txt":"Chapini - insumos de higiene"},{"ac":"987543","cl":"KB","doc":"1100082613","fecha":"2026-06-01","imp":1230479,"txt":"ZONA DE JUEGOS 06/2026"},{"ac":"987879","cl":"KB","doc":"1100082420","fecha":"2026-05-22","imp":600000,"txt":"QUINA BRAIAN - SEO 05/2026"},{"ac":"987933","cl":"KB","doc":"1100082599","fecha":"2026-06-09","imp":1400212,"txt":"Honorarios 06/2026"},{"ac":"987933","cl":"KB","doc":"1100082600","fecha":"2026-06-09","imp":2791585,"txt":"HUAWEI 06/2026"},{"ac":"988199","cl":"KB","doc":"1100082391","fecha":"2026-06-01","imp":1785348,"txt":"ESTEFAN ROGER - Optim Programatica 05/2026"},{"ac":"988251","cl":"KB","doc":"1100082603","fecha":"2026-06-01","imp":7308400,"txt":"Desarrollo Soft. DDC Mensual 06/2026"},{"ac":"988251","cl":"KB","doc":"1100082604","fecha":"2026-06-01","imp":10272900,"txt":"Desarrollo Soft. DLA C17 06/2026"},{"ac":"988312","cl":"KB","doc":"1100082633","fecha":"2026-06-17","imp":1650000,"txt":"REZ MASUD LAURA 06/2026"},{"ac":"988422","cl":"KB","doc":"1100082682b","fecha":"2026-06-01","imp":646619,"txt":"Bio Clean - Limpieza"},{"ac":"988436","cl":"KB","doc":"1100081992","fecha":"2026-06-01","imp":185000,"txt":"Artal Conte - Honorarios"},{"ac":"988442","cl":"KB","doc":"1100081993","fecha":"2026-06-01","imp":185000,"txt":"Cerdan - Honorarios"},{"ac":"988443","cl":"KB","doc":"1100081991","fecha":"2026-06-01","imp":185000,"txt":"Sanchez Ariel - Honorarios"},{"ac":"988523","cl":"KB","doc":"1100082466","fecha":"2026-06-05","imp":1385017,"txt":"Licencia mensual ABACO 06/2026"},{"ac":"988530","cl":"KB","doc":"1100082393","fecha":"2026-06-01","imp":1980491,"txt":"AVALIAN PERIODO 06/2026"},{"ac":"988539","cl":"KB","doc":"1100082567","fecha":"2026-06-11","imp":2000000,"txt":"Ulman - Desarrollo 05/2026"},{"ac":"988547","cl":"KB","doc":"1100082467","fecha":"2026-06-04","imp":3091238,"txt":"Distribucion 04/2026"},{"ac":"988547","cl":"KB","doc":"1100082468","fecha":"2026-06-04","imp":3603405,"txt":"Distribucion 05/2026"},{"ac":"988616","cl":"KB","doc":"1100082424","fecha":"2026-06-01","imp":1087243,"txt":"ACTIVETA AGENCY SAS 05/2026"},{"ac":"988697","cl":"KB","doc":"1100082601","fecha":"2026-06-11","imp":3968935,"txt":"SEGURIDAD PRIVADA 05/2026"},{"ac":"988702","cl":"KB","doc":"1100082597","fecha":"2026-06-10","imp":2420000,"txt":"Serv audiovisual 05/2026"},{"ac":"988703","cl":"KB","doc":"1100082598","fecha":"2026-06-10","imp":4840000,"txt":"Serv audiovisual 05/2026"},{"ac":"953935","cl":"K3","doc":"2800010302","fecha":"2026-05-31","imp":312992,"txt":"Saldo a Facturar 05/2026"},{"ac":"953987","cl":"K3","doc":"2800010295","fecha":"2026-05-31","imp":531121,"txt":"Saldo a Facturar 05/2026"},{"ac":"956024","cl":"K3","doc":"2800010300","fecha":"2026-05-31","imp":225068,"txt":"Saldo a Facturar 05/2026"},{"ac":"958089","cl":"K3","doc":"2800010281","fecha":"2026-05-31","imp":403487,"txt":"Saldo a Facturar 05/2026"},{"ac":"958993","cl":"KB","doc":"1100082619","fecha":"2026-05-26","imp":2933629,"txt":"Distr. Suscripciones 04/2026"},{"ac":"958993","cl":"K3","doc":"2800010304","fecha":"2026-05-31","imp":3139226,"txt":"Saldo a Facturar 05/2026"},{"ac":"959291","cl":"K3","doc":"2800010293","fecha":"2026-05-31","imp":262620,"txt":"Saldo a Facturar 05/2026"},{"ac":"960220","cl":"K3","doc":"2800010299","fecha":"2026-05-31","imp":8728,"txt":"Saldo a Facturar 05/2026"},{"ac":"961058","cl":"K3","doc":"2800010298","fecha":"2026-05-31","imp":654512,"txt":"Saldo a Facturar 05/2026"},{"ac":"962167","cl":"KB","doc":"1100082303","fecha":"2026-05-21","imp":57042,"txt":"Distr. Suscripciones 04/2026"},{"ac":"963509","cl":"K3","doc":"2800009989","fecha":"2026-01-31","imp":27785,"txt":"Saldo a Facturar 01/2026"},{"ac":"967290","cl":"K3","doc":"2800010292","fecha":"2026-05-31","imp":184112,"txt":"Saldo a Facturar 05/2026"},{"ac":"968683","cl":"K3","doc":"2800010307","fecha":"2026-05-31","imp":256688,"txt":"Saldo a Facturar 05/2026"},{"ac":"963925","cl":"K3","doc":"2800010284","fecha":"2026-05-31","imp":1046408,"txt":"Saldo a Facturar 05/2026"},{"ac":"966428","cl":"K3","doc":"2800010279","fecha":"2026-05-31","imp":474555,"txt":"Saldo a Facturar 05/2026"},{"ac":"983015","cl":"K3","doc":"2800010309","fecha":"2026-05-31","imp":157682,"txt":"Saldo a Facturar 05/2026"}];
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+const MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MNA = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+let viewYear = new Date().getFullYear();
+let viewMonth = new Date().getMonth();
+let thursdays = [];
+let activeWeekIdx = 0;
+let sapFilter = 'all';
+let assignTarget = null;
+let assignSels = [];
+
+// Estado persistente
+let state = {
+  approved: [],       // docs aprobados
+  userAssignments: {}, // ac -> [sems]
+  agenda: JSON.parse(JSON.stringify(AGENDA_DEFAULT)),
+  sap: SAP_BUILTIN,
+  lastUpdate: null
+};
+
+// JSONBin config
+let BIN_ID = localStorage.getItem('cap_bin_id') || '';
+let BIN_KEY = localStorage.getItem('cap_bin_key') || '';
+
+// ─── SYNC ─────────────────────────────────────────────────────────────────────
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if(s==='ok'){dot.className='sync-dot';lbl.textContent='Sincronizado';}
+  else if(s==='saving'){dot.className='sync-dot saving';lbl.textContent='Guardando...';}
+  else if(s==='offline'){dot.className='sync-dot offline';lbl.textContent='Solo local';}
+  else{dot.className='sync-dot offline';lbl.textContent='Sin nube';}
+}
+
+async function loadFromCloud() {
+  if(!BIN_ID||!BIN_KEY) { loadLocal(); return; }
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':BIN_KEY}});
+    if(!r.ok) throw new Error();
+    const data = await r.json();
+    if(data.record) {
+      state = {...state, ...data.record};
+      if(!state.agenda) state.agenda = JSON.parse(JSON.stringify(AGENDA_DEFAULT));
+    }
+    setSyncStatus('ok');
+  } catch(e) { loadLocal(); setSyncStatus('offline'); }
+  initUI();
+}
+
+function loadLocal() {
+  const saved = localStorage.getItem('cap_state');
+  if(saved) try { const s=JSON.parse(saved); state={...state,...s}; } catch(e){}
+  setSyncStatus(BIN_ID?'offline':'none');
+  initUI();
+}
+
+let saveTimer = null;
+function schedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 800);
+}
+async function doSave() {
+  // Always save local
+  const toSave = {approved:state.approved, userAssignments:state.userAssignments, agenda:state.agenda, sap:state.sap, lastUpdate:new Date().toISOString()};
+  localStorage.setItem('cap_state', JSON.stringify(toSave));
+  if(!BIN_ID||!BIN_KEY){setSyncStatus('none');return;}
+  setSyncStatus('saving');
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':BIN_KEY},body:JSON.stringify(toSave)});
+    setSyncStatus('ok');
+  } catch(e){setSyncStatus('offline');}
+}
+
+function saveConfig() {
+  BIN_ID = document.getElementById('bin-id-input').value.trim();
+  BIN_KEY = document.getElementById('bin-key-input').value.trim();
+  localStorage.setItem('cap_bin_id', BIN_ID);
+  localStorage.setItem('cap_bin_key', BIN_KEY);
+  document.getElementById('config-bar').style.display='none';
+  loadFromCloud();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function getThursdays(y,m){const ts=[];const d=new Date(y,m,1);while(d.getDay()!==4)d.setDate(d.getDate()+1);while(d.getMonth()===m){ts.push(new Date(d));d.setDate(d.getDate()+7);}return ts;}
+function fd(d){return d.getDate()+' '+MNA[d.getMonth()];}
+function fm(n){return '$'+Math.round(n).toLocaleString('es-AR');}
+function getName(ac){return MAESTRO[ac]?.n||NODEF_NAMES[ac]||state.agenda[ac]?.name||('Acreedor '+ac);}
+function getCBU(ac){return MAESTRO[ac]?.cbu||'';}
+function approvedSet(){return new Set(state.approved);}
+
+function rebuildThursdays(){
+  thursdays=getThursdays(viewYear,viewMonth);
+  const today=new Date();
+  if(viewYear===today.getFullYear()&&viewMonth===today.getMonth()){
+    activeWeekIdx=0;
+    for(let i=thursdays.length-1;i>=0;i--){if(today>=thursdays[i]){activeWeekIdx=i;break;}}
+  } else {activeWeekIdx=0;}
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['agenda','nodef','todas','sap','reporte'][i]===t));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='sap')renderSAP();
+  if(t==='reporte')renderReporte();
+  if(t==='nodef')renderNoDef();
+  if(t==='todas')renderTodas();
+}
+
+// ─── AGENDA ──────────────────────────────────────────────────────────────────
+function prevMonth(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}rebuildThursdays();renderMonthUI();}
+function nextMonth(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}rebuildThursdays();renderMonthUI();}
+
+function renderMonthUI(){
+  document.getElementById('month-label').textContent=MN[viewMonth]+' '+viewYear;
+  document.getElementById('top-meta').textContent=MN[viewMonth]+' '+viewYear+' · Próximo jueves: '+fd(thursdays[activeWeekIdx]);
+  const today=new Date();
+  const isCur=viewYear===today.getFullYear()&&viewMonth===today.getMonth();
+  document.getElementById('week-nav').innerHTML=thursdays.map((t,i)=>{
+    const isNow=isCur&&today>=t&&(i===thursdays.length-1||today<thursdays[i+1]);
+    return `<button class="wk-btn${activeWeekIdx===i?' active':''}${isNow&&activeWeekIdx!==i?' today':''}" onclick="selWeek(${i})">${i+1}° jue · ${fd(t)}</button>`;
+  }).join('');
+  renderAgenda();
+}
+
+function selWeek(i){activeWeekIdx=i;renderMonthUI();}
+
+function getSemInvs(){
+  const sem=activeWeekIdx+1;
+  return state.sap.filter(r=>{
+    const ua=state.userAssignments[r.ac];
+    if(ua) return ua.includes(sem);
+    const ag=state.agenda[r.ac];
+    return ag&&ag.sem.includes(sem);
+  });
+}
+
+function renderAgenda(){
+  const app=approvedSet();
+  const invs=getSemInvs();
+  const appr=invs.filter(i=>app.has(i.doc));
+  const pend=invs.filter(i=>!app.has(i.doc));
+  const totalAppr=appr.reduce((s,i)=>s+i.imp,0);
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Facturas</div><div class="stat-val">${invs.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Aprobadas</div><div class="stat-val green">${appr.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Pendientes</div><div class="stat-val amber">${pend.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Aprobado</div><div class="stat-val blue" style="font-size:14px;padding-top:3px">${fm(totalAppr)}</div></div>`;
+  document.getElementById('badge-rep').textContent=state.approved.length;
+  let html='';
+  if(pend.length){
+    html+=`<div class="grp"><div class="grp-hdr"><span>Para revisar · ${pend.length}</span>
+      <button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button></div>`;
+    pend.forEach(inv=>{html+=rowHTML(inv,false);});
+    html+='</div>';
+  }
+  if(appr.length){
+    html+=`<div class="grp"><div class="grp-hdr"><span>Aprobadas · ${fm(totalAppr)}</span>
+      <button class="grp-btn red" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar todas</button></div>`;
+    appr.forEach(inv=>{html+=rowHTML(inv,true);});
+    html+='</div>';
+  }
+  if(!invs.length) html=`<div class="empty"><i class="ti ti-calendar-off" style="font-size:24px;display:block;margin-bottom:8px"></i>No hay facturas para este jueves</div>`;
+  document.getElementById('agenda-body').innerHTML=html;
+}
+
+function rowHTML(inv,done){
+  const cl=inv.cl.toLowerCase();
+  return `<div class="inv-row${done?' done':''}">
+    <input type="checkbox" class="inv-check" ${done?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
+    <div style="min-width:0">
+      <div class="inv-name">${getName(inv.ac)}</div>
+      <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
+    </div>
+    <div class="inv-amt">${fm(inv.imp)}</div>
+    <span class="badge ${cl}">${inv.cl}</span>
+  </div>`;
+}
+
+function toggleApp(doc,checked){
+  const s=new Set(state.approved);
+  if(checked)s.add(doc);else s.delete(doc);
+  state.approved=[...s];
+  schedSave();renderAgenda();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+function approveAll(){const s=new Set(state.approved);getSemInvs().forEach(i=>s.add(i.doc));state.approved=[...s];schedSave();renderAgenda();document.getElementById('badge-rep').textContent=state.approved.length;}
+function unapproveAll(){const s=new Set(state.approved);getSemInvs().forEach(i=>s.delete(i.doc));state.approved=[...s];schedSave();renderAgenda();document.getElementById('badge-rep').textContent=state.approved.length;}
+
+// ─── NO DEFINIDOS ─────────────────────────────────────────────────────────────
+function renderNoDef(){
+  const agAcs=new Set(Object.keys(state.agenda));
+  const nodef=new Set();
+  state.sap.forEach(r=>{if(!agAcs.has(r.ac)&&!state.userAssignments[r.ac])nodef.add(r.ac);});
+  document.getElementById('badge-nd').textContent=nodef.size;
+  let html='';
+  [...nodef].sort().forEach(ac=>{
+    const invs=state.sap.filter(r=>r.ac===ac);
+    const total=invs.reduce((s,i)=>s+i.imp,0);
+    const ua=state.userAssignments[ac];
+    html+=`<div class="inv-row nodef-row" style="grid-template-columns:1fr auto auto">
+      <div style="min-width:0">
+        <div class="inv-name">${getName(ac)} <span style="font-size:10px;color:var(--text3)">(N° ${ac})</span></div>
+        <div class="inv-sub">${invs.length} factura${invs.length>1?'s':''} · ${invs.slice(0,2).map(i=>i.doc).join(', ')}</div>
+        ${ua?`<div style="margin-top:3px"><span class="badge kd">Sem.: ${ua.map(s=>[,'1ra','2da','3ra','4ta','Última'][s]).join(', ')}</span></div>`:''}
+      </div>
+      <div class="inv-amt">${fm(total)}</div>
+      <button class="btn" onclick="openAssign('${ac}')">Asignar</button>
+    </div>`;
+  });
+  if(!nodef.size)html=`<div class="empty"><i class="ti ti-circle-check" style="font-size:24px;display:block;margin-bottom:8px"></i>Todos tienen semana asignada</div>`;
+  document.getElementById('nodef-body').innerHTML=html;
+}
+
+// ─── TODAS LAS SEMANAS ────────────────────────────────────────────────────────
+function renderTodas(){
+  const todas=Object.entries(state.agenda).filter(([,v])=>v.todas);
+  let html=`<div class="alert-bar"><i class="ti ti-info-circle"></i> Aparecen automáticamente en cada jueves.</div>`;
+  todas.forEach(([ac])=>{
+    const invs=state.sap.filter(r=>r.ac===ac);
+    const total=invs.reduce((s,i)=>s+i.imp,0);
+    const cbu=getCBU(ac);
+    html+=`<div class="inv-row" style="grid-template-columns:1fr auto">
+      <div style="min-width:0">
+        <div class="inv-name">${getName(ac)}</div>
+        <div class="inv-sub">N° ${ac} · ${cbu&&cbu!=='VEP'?'CBU: '+cbu.substring(0,16)+'...':cbu==='VEP'?'Pago por VEP':'Sin CBU'}</div>
+        <div class="inv-sub" style="margin-top:2px">${invs.length} facturas · ${fm(total)}</div>
+      </div>
+      <span class="badge kb">Todas</span>
+    </div>`;
+  });
+  document.getElementById('todas-body').innerHTML=html;
+}
+
+// ─── SAP ─────────────────────────────────────────────────────────────────────
+function renderSAP(){
+  const q=(document.getElementById('sap-q')?.value||'').toLowerCase();
+  const cls=[...new Set(state.sap.map(r=>r.cl))].sort();
+  document.getElementById('sap-chips').innerHTML=
+    `<button class="chip${sapFilter==='all'?' on':''}" onclick="setSap('all')">Todo</button>`
+    +cls.map(c=>`<button class="chip${sapFilter===c?' on':''}" onclick="setSap('${c}')">${c}</button>`).join('');
+  const rows=state.sap.filter(r=>{
+    const mq=!q||r.ac.includes(q)||r.doc.includes(q)||(r.txt||'').toLowerCase().includes(q)||getName(r.ac).toLowerCase().includes(q);
+    return mq&&(sapFilter==='all'||r.cl===sapFilter);
+  });
+  const total=rows.reduce((s,r)=>s+r.imp,0);
+  let html=`<p style="font-size:12px;color:var(--text2);margin-bottom:8px">${rows.length} facturas · ${fm(total)}</p>
+  <table><thead><tr><th style="width:62px">Acreedor</th><th style="width:50px">Tipo</th><th style="width:96px">Documento</th><th style="width:80px">Fecha</th><th>Concepto</th><th style="width:90px;text-align:right">Importe</th><th style="width:55px">Sem.</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const ua=state.userAssignments[r.ac];
+    const ag=state.agenda[r.ac];
+    const sems=ua||ag?.sem||null;
+    const semTxt=sems?sems.map(s=>[,'1°','2°','3°','4°','ú.'][s]).join(','):'—';
+    html+=`<tr style="${!sems?'opacity:.5':''}">
+      <td style="font-family:monospace">${r.ac}</td>
+      <td><span class="badge ${r.cl.toLowerCase()}">${r.cl}</span></td>
+      <td style="font-family:monospace">${r.doc}</td>
+      <td>${r.fecha}</td>
+      <td title="${r.txt}">${r.txt||'—'}</td>
+      <td style="text-align:right;font-family:monospace">${fm(r.imp)}</td>
+      <td style="font-size:11px;color:${sems?'var(--text)':'var(--red)'}">${semTxt}</td>
+    </tr>`;
+  });
+  html+=`</tbody><tfoot><tr><td colspan="5" style="text-align:right">Total</td><td style="text-align:right;font-family:monospace">${fm(total)}</td><td></td></tr></tfoot></table>`;
+  document.getElementById('sap-body').innerHTML=html;
+}
+function setSap(f){sapFilter=f;renderSAP();}
+
+function handleSAPUpload(e){
+  // Placeholder: en producción parsear XLSX con SheetJS
+  alert('Para importar un nuevo SAP necesitás SheetJS. Por ahora los datos del 25/6 están cargados.\nContactá a tu proveedor IT para integrar la importación automática.');
+  e.target.value='';
+}
+
+// ─── REPORTE ─────────────────────────────────────────────────────────────────
+function renderReporte(){
+  const app=approvedSet();
+  const apprInvs=state.sap.filter(r=>app.has(r.doc));
+  const total=apprInvs.reduce((s,r)=>s+r.imp,0);
+  const thu=thursdays[activeWeekIdx];
+  if(!apprInvs.length){
+    document.getElementById('rep-body').innerHTML=`<div class="empty"><i class="ti ti-file-off" style="font-size:24px;display:block;margin-bottom:8px"></i>Aprobá facturas en la agenda para generar el reporte</div>`;
+    return;
+  }
+  let html=`<div class="rep-actions">
+    <p class="rep-meta">Jueves ${fd(thu)} · ${apprInvs.length} facturas · <strong>${fm(total)}</strong></p>
+    <div class="btn-row">
+      <button class="btn" onclick="copyRep()"><i class="ti ti-copy"></i> Copiar</button>
+      <button class="btn" onclick="downloadCSV()"><i class="ti ti-download"></i> Descargar CSV</button>
+    </div>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr>
+    <th style="width:62px">N° Prov.</th><th style="width:140px">Nombre</th><th style="width:46px">Tipo</th>
+    <th style="width:96px">N° Doc.</th><th>Concepto</th><th style="width:148px">CBU</th>
+    <th style="width:96px;text-align:right">Importe</th>
+  </tr></thead><tbody>`;
+  apprInvs.forEach(r=>{
+    const cbu=getCBU(r.ac);
+    html+=`<tr>
+      <td style="font-family:monospace">${r.ac}</td>
+      <td title="${getName(r.ac)}">${getName(r.ac)}</td>
+      <td><span class="badge ${r.cl.toLowerCase()}">${r.cl}</span></td>
+      <td style="font-family:monospace">${r.doc}</td>
+      <td title="${r.txt}">${r.txt||'—'}</td>
+      <td style="font-family:monospace;font-size:10px">${cbu&&cbu!=='VEP'?cbu:cbu==='VEP'?'<span style="color:var(--amber)">VEP</span>':'<span style="color:var(--red)">Sin CBU</span>'}</td>
+      <td style="text-align:right;font-family:monospace">${fm(r.imp)}</td>
+    </tr>`;
+  });
+  html+=`</tbody><tfoot><tr><td colspan="6" style="text-align:right">Total</td><td style="text-align:right;font-family:monospace">${fm(total)}</td></tr></tfoot></table></div>`;
+  document.getElementById('rep-body').innerHTML=html;
+}
+
+function copyRep(){
+  const app=approvedSet();
+  const apprInvs=state.sap.filter(r=>app.has(r.doc));
+  const lines=['N° Proveedor\tNombre\tTipo doc\tN° Documento\tConcepto\tCBU\tIMPORTE ARS'];
+  apprInvs.forEach(r=>lines.push(`${r.ac}\t${getName(r.ac)}\t${r.cl}\t${r.doc}\t${r.txt||''}\t${getCBU(r.ac)}\t${Math.round(r.imp)}`));
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('Copiado al portapapeles. Pegá con Ctrl+V en Excel.'));
+}
+
+function downloadCSV(){
+  const app=approvedSet();
+  const apprInvs=state.sap.filter(r=>app.has(r.doc));
+  const lines=['N° Proveedor,Nombre,Tipo doc,N° Documento,Concepto,CBU,Importe ARS'];
+  apprInvs.forEach(r=>lines.push(`"${r.ac}","${getName(r.ac)}","${r.cl}","${r.doc}","${(r.txt||'').replace(/"/g,"'")}","${getCBU(r.ac)}","${Math.round(r.imp)}"`));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`reporte_tesoreria_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+// ─── MODAL ASIGNAR SEMANA ────────────────────────────────────────────────────
+function openAssign(ac){
+  assignTarget=ac;
+  assignSels=state.userAssignments[ac]?[...state.userAssignments[ac]]:[];
+  document.getElementById('assign-name').textContent=getName(ac)+' · N° '+ac;
+  document.getElementById('sem-grid').innerHTML=[1,2,3,4,5].map(s=>`
+    <button class="sem-btn${assignSels.includes(s)?' sel':''}" data-sem="${s}" onclick="toggleSem(${s})">
+      ${s}° jue<br><span style="font-size:10px;opacity:.75">${thursdays[s-1]?fd(thursdays[s-1]):s+'° sem'}</span>
+    </button>`).join('');
+  document.getElementById('assign-modal').classList.add('open');
+}
+
+function toggleSem(s){
+  if(assignSels.includes(s)){assignSels=assignSels.filter(x=>x!==s);}
+  else{assignSels.push(s);}
+  document.querySelectorAll('#sem-grid .sem-btn').forEach(btn=>{
+    btn.classList.toggle('sel',assignSels.includes(parseInt(btn.dataset.sem)));
+  });
+}
+
+function saveAssign(){
+  if(assignTarget&&assignSels.length>0){
+    state.userAssignments[assignTarget]=[...assignSels].sort();
+    schedSave();
+  }
+  closeModal();renderNoDef();renderAgenda();
+}
+function closeModal(){document.getElementById('assign-modal').classList.remove('open');assignTarget=null;assignSels=[];}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+function initUI(){
+  rebuildThursdays();
+  renderMonthUI();
+  renderNoDef();
+  if(!BIN_ID){
+    document.getElementById('config-bar').style.display='flex';
+    document.getElementById('bin-id-input').value=BIN_ID;
+    document.getElementById('bin-key-input').value=BIN_KEY;
+  }
+}
+
+// Arrancar
+loadFromCloud();
+</script>
+</body>
+</html>
