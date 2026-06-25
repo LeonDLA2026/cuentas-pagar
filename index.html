@@ -157,6 +157,7 @@ tfoot td{font-weight:600;background:var(--bg3);border-top:1px solid var(--border
   .topbar{flex-direction:column}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -438,13 +439,14 @@ function renderAgenda(){
 
 function rowHTML(inv,done){
   const cl=inv.cl.toLowerCase();
-  return `<div class="inv-row${done?' done':''}">
+  const isCredit = inv.signo === 1; // positivo en SAP = nota de crédito / a favor
+  return `<div class="inv-row${done?' done':''}${isCredit?' style="border-left:3px solid var(--green)"':''}">
     <input type="checkbox" class="inv-check" ${done?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
     <div style="min-width:0">
-      <div class="inv-name">${getName(inv.ac)}</div>
+      <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:600">NC/Comp.</span>':''}</div>
       <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
     </div>
-    <div class="inv-amt">${fm(inv.imp)}</div>
+    <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
     <span class="badge ${cl}">${inv.cl}</span>
   </div>`;
 }
@@ -463,7 +465,11 @@ function unapproveAll(){const s=new Set(state.approved);getSemInvs().forEach(i=>
 function renderNoDef(){
   const agAcs=new Set(Object.keys(state.agenda));
   const nodef=new Set();
-  state.sap.forEach(r=>{if(!agAcs.has(r.ac)&&!state.userAssignments[r.ac])nodef.add(r.ac);});
+  // Todos los acreedores del SAP sin semana asignada (ni en agenda ni en userAssignments)
+  state.sap.forEach(r=>{
+    const hasAgenda = agAcs.has(r.ac) || state.userAssignments[r.ac];
+    if(!hasAgenda) nodef.add(r.ac);
+  });
   document.getElementById('badge-nd').textContent=nodef.size;
   let html='';
   [...nodef].sort().forEach(ac=>{
@@ -539,9 +545,71 @@ function renderSAP(){
 function setSap(f){sapFilter=f;renderSAP();}
 
 function handleSAPUpload(e){
-  // Placeholder: en producción parsear XLSX con SheetJS
-  alert('Para importar un nuevo SAP necesitás SheetJS. Por ahora los datos del 25/6 están cargados.\nContactá a tu proveedor IT para integrar la importación automática.');
-  e.target.value='';
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const parsed = [];
+      const seen = new Set();
+      for(let i=1; i<rows.length; i++){
+        const r = rows[i];
+        const ac = String(r[0]||'').trim();
+        const cl = String(r[1]||'').trim();
+        const doc = String(r[3]||'').trim();
+        const fechaRaw = r[4];
+        const importeRaw = r[6];
+        const txt = String(r[8]||'').trim();
+        if(!ac || !cl || !doc) continue;
+        // Importe: negativo = deuda a pagar, positivo = nota de crédito u otro doc compensatorio
+        const imp = parseFloat(String(importeRaw).replace(',','.')) || 0;
+        // Fecha
+        let fecha = '';
+        if(typeof fechaRaw === 'number'){
+          const d = XLSX.SSF.parse_date_code(fechaRaw);
+          fecha = d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');
+        } else {
+          fecha = String(fechaRaw||'').trim().substring(0,10);
+        }
+        const key = ac+'|'+doc;
+        if(seen.has(key)) continue;
+        seen.add(key);
+        // imp guardado como viene de SAP (negativo = a pagar, positivo = a favor)
+        parsed.push({ac, cl, doc, fecha, imp, txt});
+      }
+      if(parsed.length === 0){
+        alert('No se encontraron documentos. Verificá que el archivo sea el reporte SAP correcto.');
+        e.target.value=''; return;
+      }
+      // Verificar saldos netos por acreedor
+      const saldos = {};
+      parsed.forEach(r => { saldos[r.ac] = (saldos[r.ac]||0) + r.imp; });
+      const aFavor = Object.entries(saldos).filter(([,v]) => v > 0);
+      if(aFavor.length > 0){
+        const lista = aFavor.map(([ac,v]) => '  • ' + getName(ac) + ' (N°'+ac+'): $' + Math.round(v).toLocaleString('es-AR')).join('\n');
+        alert('⚠️ ATENCIÓN — Los siguientes acreedores tienen saldo neto a FAVOR de la empresa (les deben más de lo que se les debe):\n\n' + lista + '\n\nRevisá si hay notas de crédito o pagos no compensados.');
+      }
+      // Para mostrar en agenda usamos el importe absoluto pero marcamos signo
+      state.sap = parsed.map(r => ({...r, imp: Math.abs(r.imp), signo: r.imp > 0 ? 1 : -1}));
+      // Limpiar aprobaciones anteriores que ya no existen
+      const docSet = new Set(state.sap.map(r=>r.doc));
+      state.approved = state.approved.filter(d => docSet.has(d));
+      schedSave();
+      renderSAP();
+      renderAgenda();
+      renderNoDef();
+      const neg = parsed.filter(r=>r.imp<0).length;
+      const pos = parsed.filter(r=>r.imp>0).length;
+      alert('✓ Importados ' + parsed.length + ' documentos de ' + file.name + '\n' + neg + ' facturas a pagar · ' + pos + ' notas de crédito/compensaciones');
+    } catch(err) {
+      alert('Error al leer el archivo: ' + err.message);
+    }
+    e.target.value='';
+  };
+  reader.readAsBinaryString(file);
 }
 
 // ─── REPORTE ─────────────────────────────────────────────────────────────────
