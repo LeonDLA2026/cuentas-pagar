@@ -150,6 +150,7 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
 .modal-btns{display:flex;gap:6px;justify-content:flex-end}
 
 .empty{text-align:center;padding:2.5rem;color:var(--text2);font-size:13px}
+.tr-checked td{background:color-mix(in srgb,var(--green-bg) 30%,transparent)}
 .rep-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.inv-row{grid-template-columns:18px 1fr auto}.inv-row .bdg{display:none}}
 </style>
@@ -237,6 +238,10 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
         Subir Excel
       </div>
       <div class="upload-status" id="st-agenda"></div>
+      <div class="danger-zone" id="agenda-danger" style="display:none">
+        <p><i class="ti ti-trash"></i> Hay <strong id="agenda-count">0</strong> proveedores cargados</p>
+        <button class="btn red" onclick="deleteAgenda()"><i class="ti ti-trash"></i> Eliminar agenda</button>
+      </div>
     </div>
 
     <!-- SAP -->
@@ -435,7 +440,10 @@ function renderAgenda(){
   } else {
     if(pend.length){
       html+=`<div class="grp"><div class="grp-hdr"><span>Para revisar · ${pend.length}</span>
-        <button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button></div>`;
+        <div style="display:flex;gap:5px">
+          <button class="grp-btn" onclick="sendToNextWeek()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>
+          <button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>
+        </div></div>`;
       pend.forEach(inv=>{html+=rowHTML(inv,false);});
       html+='</div>';
     }
@@ -527,6 +535,7 @@ function renderTodas(){
 function renderSAP(){
   const q=(document.getElementById('sap-q')?.value||'').toLowerCase();
   const cls=[...new Set(state.sap.map(r=>r.cl))].sort();
+  const app=approvedSet();
   document.getElementById('sap-chips').innerHTML=
     `<button class="chip${sapFilter==='all'?' on':''}" onclick="setSap('all')">Todo</button>`
     +cls.map(c=>`<button class="chip${sapFilter===c?' on':''}" onclick="setSap('${c}')">${c}</button>`).join('');
@@ -536,9 +545,21 @@ function renderSAP(){
     return mq&&(sapFilter==='all'||r.cl===sapFilter);
   });
   const neto=rows.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
+  const selInSAP=rows.filter(r=>app.has(r.doc)).length;
   if(!rows.length){document.getElementById('sap-body').innerHTML=`<div class="empty">Sin resultados</div>`;return;}
-  let html=`<p style="font-size:12px;color:var(--text2);margin-bottom:8px">${rows.length} docs · Neto: ${fm(neto)}</p>
-  <table><thead><tr>
+
+  // Action bar
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+    <p style="font-size:12px;color:var(--text2)">${rows.length} docs · Neto: ${fm(neto)}</p>
+    <div style="display:flex;gap:6px;align-items:center">
+      <span style="font-size:12px;color:var(--text2)">${selInSAP} seleccionados</span>
+      <button class="btn" onclick="sapSelectAll(true)"><i class="ti ti-checks"></i> Sel. todas</button>
+      <button class="btn" onclick="sapSelectAll(false)"><i class="ti ti-x"></i> Desel. todas</button>
+      <button class="btn prim" onclick="sapAddToReport()" ${selInSAP===0?'style="opacity:.5;pointer-events:none"':''}><i class="ti ti-send"></i> Agregar al reporte</button>
+    </div>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr>
+    <th style="width:28px"><input type="checkbox" id="sap-chk-all" onchange="sapSelectAll(this.checked)" style="accent-color:var(--text)"></th>
     <th style="width:62px">Acreedor</th>
     <th style="width:160px">Nombre</th>
     <th style="width:48px">Tipo</th>
@@ -548,26 +569,70 @@ function renderSAP(){
     <th style="width:96px;text-align:right">Importe</th>
     <th style="width:55px">Sem.</th>
   </tr></thead><tbody>`;
+
   rows.forEach(r=>{
     const ag=getAgendaForAc(r.ac);
     const sems=ag?(ag.todas?['T']:ag.sem):null;
     const semTxt=sems?(ag.todas?'Todas':sems.map(s=>[,'1°','2°','3°','4°','ú.'][s]).join(',')):'—';
     const isCredit=r.signo>0;
-    html+=`<tr style="${!ag?'opacity:.5':''}${isCredit?';color:var(--green)':''}">
+    const checked=app.has(r.doc);
+    html+=`<tr style="${!ag?'opacity:.5':''}" class="${checked?'tr-checked':''}" id="tr-${r.doc}">
+      <td><input type="checkbox" class="sap-row-chk" data-doc="${r.doc}" ${checked?'checked':''} onchange="sapRowToggle('${r.doc}',this.checked)" style="accent-color:var(--text)"></td>
       <td style="font-family:monospace">${r.ac}</td>
       <td title="${getName(r.ac)}">${getName(r.ac)}</td>
       <td><span class="bdg ${r.cl.toLowerCase()}">${r.cl}</span></td>
       <td style="font-family:monospace">${r.doc}</td>
       <td>${r.fecha}</td>
-      <td title="${r.txt}">${r.txt||'—'}</td>
-      <td style="text-align:right;font-family:monospace">${isCredit?'-':''}${fm(r.imp)}</td>
+      <td title="${r.txt}" style="${isCredit?'color:var(--green)':''}">${r.txt||'—'}</td>
+      <td style="text-align:right;font-family:monospace;${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(r.imp)}</td>
       <td style="font-size:11px;color:${ag?'var(--text)':'var(--red)'}">${semTxt}</td>
     </tr>`;
   });
-  html+=`</tbody><tfoot><tr><td colspan="6" style="text-align:right">Neto total</td><td style="text-align:right;font-family:monospace">${fm(neto)}</td><td></td></tr></tfoot></table>`;
+  html+=`</tbody><tfoot><tr><td></td><td colspan="6" style="text-align:right">Neto total</td><td style="text-align:right;font-family:monospace">${fm(neto)}</td><td></td></tr></tfoot></table></div>`;
   document.getElementById('sap-body').innerHTML=html;
 }
 function setSap(f){sapFilter=f;renderSAP();}
+
+// SAP checkbox helpers
+let _sapRows=[];
+function getSAPFilteredDocs(){
+  const q=(document.getElementById('sap-q')?.value||'').toLowerCase();
+  return state.sap.filter(r=>{
+    const mq=!q||r.ac.includes(q)||r.doc.includes(q)||(r.txt||'').toLowerCase().includes(q)||getName(r.ac).toLowerCase().includes(q);
+    return mq&&(sapFilter==='all'||r.cl===sapFilter);
+  }).map(r=>r.doc);
+}
+function sapRowToggle(doc,checked){
+  const s=new Set(state.approved);
+  if(checked)s.add(doc);else s.delete(doc);
+  state.approved=[...s];
+  schedSave();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+  // update row highlight without full re-render
+  const row=document.getElementById('tr-'+doc);
+  if(row) row.style.background=checked?'color-mix(in srgb,var(--green-bg) 40%,var(--bg2))':'';
+  // update counter in action bar
+  const app=new Set(state.approved);
+  const visible=getSAPFilteredDocs();
+  const sel=visible.filter(d=>app.has(d)).length;
+  const span=document.querySelector('#sap-body span');
+  if(span) span.textContent=sel+' seleccionados';
+  const addBtn=document.querySelector('#sap-body .btn.prim');
+  if(addBtn) addBtn.style.opacity=sel===0?'.5':'1';
+}
+function sapSelectAll(checked){
+  const docs=getSAPFilteredDocs();
+  const s=new Set(state.approved);
+  docs.forEach(d=>checked?s.add(d):s.delete(d));
+  state.approved=[...s];
+  schedSave();
+  renderSAP();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+}
+function sapAddToReport(){
+  // docs ya están en state.approved, solo navegar al reporte
+  switchTab('reporte');
+}
 
 // ─── IMPORTAR DATOS ───────────────────────────────────────────────────────────
 function setStatus(id,ok,msg){
@@ -650,6 +715,7 @@ function importAgenda(e){
     renderDataStatus();
     renderNoDef();
     renderAgenda();
+    updateAgendaDanger();
     setStatus('st-agenda',true,`✓ ${total} proveedores en agenda`);
     e.target.value='';
   });
@@ -734,6 +800,7 @@ function updateSAPDanger(){
 
 function renderDataStatus(){
   updateSAPDanger();
+  updateAgendaDanger();
   const mCount=Object.keys(state.maestro).length;
   const aCount=Object.keys(state.agenda).length;
   const sCount=state.sap.length;
@@ -836,6 +903,52 @@ function saveAssign(){
 }
 
 function closeModal(){document.getElementById('assign-modal').classList.remove('open');assignTarget=null;assignSels=[];}
+
+// ─── PASAR A PRÓXIMA SEMANA ───────────────────────────────────────────────────
+function sendToNextWeek(){
+  const invs=getSemInvs();
+  const pend=invs.filter(i=>!approvedSet().has(i.doc));
+  if(!pend.length){alert('No hay facturas pendientes para pasar.');return;}
+  if(!confirm(`¿Pasar ${pend.length} factura${pend.length>1?'s':''} pendiente${pend.length>1?'s':''} a la próxima semana?`))return;
+  const nextSem=activeWeekIdx+2; // 1-indexed next
+  if(nextSem>5){alert('Ya estás en la última semana del mes. No hay semana siguiente.');return;}
+  pend.forEach(inv=>{
+    const ag=getAgendaForAc(inv.ac);
+    if(!ag)return;
+    // Agregar la semana siguiente al proveedor si no la tiene
+    const sems=new Set(ag.sem||[]);
+    sems.add(nextSem);
+    const updated={...ag,sem:[...sems].sort()};
+    // Guardar en userAssignments para no pisar la agenda base
+    state.userAssignments[inv.ac]=updated;
+  });
+  schedSave();
+  renderAgenda();
+  renderNoDef();
+  alert(`✓ ${pend.length} proveedor${pend.length>1?'es':''} agregado${pend.length>1?'s':''} también a la semana ${nextSem}.`);
+}
+
+// ─── ELIMINAR AGENDA ──────────────────────────────────────────────────────────
+function deleteAgenda(){
+  if(!confirm('¿Eliminar la agenda de pagos? Las asignaciones manuales también se borrarán.'))return;
+  state.agenda={};
+  state.userAssignments={};
+  schedSave();
+  renderDataStatus();
+  renderAgenda();
+  renderNoDef();
+  renderTodas();
+  updateAgendaDanger();
+  setStatus('st-agenda',true,'Agenda eliminada. Podés importar una nueva.');
+}
+
+function updateAgendaDanger(){
+  const d=document.getElementById('agenda-danger');
+  if(!d)return;
+  const count=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
+  if(count>0){d.style.display='flex';document.getElementById('agenda-count').textContent=count;}
+  else{d.style.display='none';}
+}
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function initUI(){
