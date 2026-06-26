@@ -160,8 +160,7 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
   <button class="tab" onclick="switchTab('proxima')"><i class="ti ti-arrow-right"></i> Próxima semana <span class="bpill bp-purple" id="badge-prox">0</span></button>
   <button class="tab" onclick="switchTab('nodef')"><i class="ti ti-clock-question"></i> Sin semana <span class="bpill bp-amber" id="badge-nd">0</span></button>
   <button class="tab" onclick="switchTab('sap')"><i class="ti ti-file-invoice"></i> SAP</button>
-  <button class="tab" onclick="switchTab('datos')"><i class="ti ti-upload"></i> Importar</button>
-  <button class="tab" onclick="switchTab('reporte')"><i class="ti ti-file-export"></i> Reporte <span class="bpill bp-blue" id="badge-rep">0</span></button>
+
 </div>
 
 <!-- AGENDA -->
@@ -382,7 +381,7 @@ function rebuildThursdays(){
 }
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
-const TAB_NAMES=['agenda','proxima','nodef','sap','datos','reporte'];
+const TAB_NAMES=['agenda','proxima','nodef','sap','datos','reporte']; // datos y reporte solo desde botones
 function switchTab(t){
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',TAB_NAMES[i]===t));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -931,15 +930,19 @@ function renderDataStatus(){
 // ─── REPORTE ─────────────────────────────────────────────────────────────────
 function renderReporte(){
   const app=approvedSet();
-  const apprInvs=[...state.sap,...state.proxima].filter(r=>app.has(r.doc));
-  // Dedup by doc
-  const seen=new Set();const uniq=apprInvs.filter(r=>{if(seen.has(r.doc))return false;seen.add(r.doc);return true;});
+  const allDocs=[...state.sap,...state.proxima];
+  const seen0=new Set();
+  const uniq=allDocs.filter(r=>{
+    if(!app.has(r.doc)||seen0.has(r.doc))return false;
+    seen0.add(r.doc);return true;
+  });
   const neto=uniq.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
   const thu=thursdays[activeWeekIdx];
   if(!uniq.length){
     document.getElementById('rep-body').innerHTML=`<div class="empty"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px"></i>Aprobá documentos en la agenda para generar el reporte</div>`;
     return;
   }
+  const proxDocs=proxSet();
   let html=`<div class="rep-actions">
     <p style="font-size:13px;color:var(--text2)">Jueves ${fd(thu)} · ${uniq.length} docs · Neto: <strong>${fm(neto)}</strong></p>
     <div class="btn-row">
@@ -948,14 +951,18 @@ function renderReporte(){
     </div>
   </div>
   <div class="tbl-wrap"><table><thead><tr>
-    <th style="width:62px">N° Prov.</th><th style="width:160px">Nombre</th><th style="width:46px">Tipo</th>
-    <th style="width:96px">N° Doc.</th><th>Concepto</th><th style="width:150px">CBU</th>
-    <th style="width:100px;text-align:right">Importe</th>
+    <th style="width:28px"></th>
+    <th style="width:62px">N° Prov.</th><th style="width:145px">Nombre</th><th style="width:46px">Tipo</th>
+    <th style="width:96px">N° Doc.</th><th>Concepto</th><th style="width:140px">CBU</th>
+    <th style="width:96px;text-align:right">Importe</th>
+    <th style="width:90px">Acción</th>
   </tr></thead><tbody>`;
   uniq.forEach(r=>{
     const cbu=getCBU(r.ac);
     const isCredit=r.signo>0;
+    const isInProx=proxDocs.has(r.doc);
     html+=`<tr style="${isCredit?'color:var(--green)':''}">
+      <td><input type="checkbox" class="rep-chk" data-doc="${r.doc}" checked onchange="repRowToggle('${r.doc}',this.checked)" style="accent-color:var(--text);width:14px;height:14px"></td>
       <td style="font-family:monospace">${r.ac}</td>
       <td title="${getName(r.ac)}">${getName(r.ac)}</td>
       <td><span class="bdg ${r.cl.toLowerCase()}">${r.cl}</span></td>
@@ -963,10 +970,55 @@ function renderReporte(){
       <td title="${r.txt}">${r.txt||'—'}</td>
       <td style="font-family:monospace;font-size:10px">${cbu&&cbu!=='VEP'?cbu:cbu==='VEP'?'<span style="color:var(--amber)">VEP</span>':'<span style="color:var(--red)">Sin CBU</span>'}</td>
       <td style="text-align:right;font-family:monospace">${isCredit?'-':''}${fm(r.imp)}</td>
+      <td>
+        <div style="display:flex;gap:3px">
+          ${isInProx
+            ? `<button class="grp-btn" title="Volver a agenda" onclick="repReturnToAgenda('${r.doc}')"><i class="ti ti-arrow-left"></i></button>`
+            : `<button class="grp-btn purple-btn" title="Pasar a próxima semana" onclick="repSendToProx('${r.doc}')"><i class="ti ti-arrow-right"></i></button>`
+          }
+          <button class="grp-btn red-btn" title="Quitar del reporte" onclick="repRemove('${r.doc}')"><i class="ti ti-x"></i></button>
+        </div>
+      </td>
     </tr>`;
   });
-  html+=`</tbody><tfoot><tr><td colspan="5" style="text-align:right">Neto total</td><td></td><td style="text-align:right;font-family:monospace">${fm(neto)}</td></tr></tfoot></table></div>`;
+  html+=`</tbody><tfoot><tr><td></td><td colspan="5" style="text-align:right">Neto total</td><td></td><td style="text-align:right;font-family:monospace">${fm(neto)}</td><td></td></tr></tfoot></table></div>`;
   document.getElementById('rep-body').innerHTML=html;
+}
+
+// Acciones inline en el reporte
+function repRowToggle(doc,checked){
+  const s=new Set(state.approved);
+  if(checked)s.add(doc);else s.delete(doc);
+  state.approved=[...s];
+  schedSave();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+  renderReporte();
+}
+
+function repRemove(doc){
+  // Desaprobar = quitar del reporte
+  const s=new Set(state.approved);
+  s.delete(doc);
+  state.approved=[...s];
+  schedSave();
+  document.getElementById('badge-rep').textContent=state.approved.length;
+  renderReporte();
+}
+
+function repSendToProx(doc){
+  // Mover de SAP a proxima (si no está ya)
+  const existing=proxSet();
+  if(!existing.has(doc)){
+    const inv=state.sap.find(r=>r.doc===doc);
+    if(inv) state.proxima.push(inv);
+  }
+  schedSave();updateBadges();renderReporte();renderAgenda();
+}
+
+function repReturnToAgenda(doc){
+  // Sacar de proxima — queda en SAP normal (agenda de la semana)
+  state.proxima=state.proxima.filter(r=>r.doc!==doc);
+  schedSave();updateBadges();renderReporte();renderAgenda();
 }
 
 function copyRep(){
