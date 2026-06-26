@@ -134,6 +134,12 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
 .sem-btn:hover:not(.sel){background:var(--bg3)}
 .modal-btns{display:flex;gap:6px;justify-content:flex-end}
 .empty{text-align:center;padding:2.5rem;color:var(--text2);font-size:13px}
+.prov-hdr{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;transition:border-color .15s}
+.prov-hdr:hover{border-color:var(--border2)}
+.prov-hdr-open{border-color:var(--blue);border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
+.prov-invoices{border:1px solid var(--blue);border-top:none;border-bottom-left-radius:var(--rl);border-bottom-right-radius:var(--rl);margin-bottom:8px;overflow:hidden}
+.prov-invoices .inv-row{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:0.5px solid var(--border);margin-bottom:0}
+.prov-invoices .inv-row:last-child{border-bottom:none}
 .rep-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.inv-row{grid-template-columns:18px 1fr auto}.inv-row .bdg{display:none}}
 </style>
@@ -301,6 +307,9 @@ let activeWeekIdx = 0;
 let sapFilter = 'all';
 let assignTarget = null;
 let assignSels   = [];
+let selectedAgenda = new Set(); // facturas seleccionadas en agenda (pendientes de acción)
+// Expanded providers per tab
+const expanded = {agenda:new Set(), proxima:new Set(), nodef:new Set(), sap:new Set()};
 
 // Estado central
 let state = {
@@ -408,8 +417,95 @@ function switchTab(t){
 }
 
 // ─── AGENDA ──────────────────────────────────────────────────────────────────
-function prevMonth(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}rebuildThursdays();renderMonthUI();}
-function nextMonth(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}rebuildThursdays();renderMonthUI();}
+function prevMonth(){viewMonth--;if(viewMonth<0){viewMonth=11;viewYear--;}selectedAgenda.clear();rebuildThursdays();renderMonthUI();}
+function nextMonth(){viewMonth++;if(viewMonth>11){viewMonth=0;viewYear++;}selectedAgenda.clear();rebuildThursdays();renderMonthUI();}
+
+// ─── GROUP HELPERS ───────────────────────────────────────────────────────────
+function groupByAc(invs){
+  const map={};
+  invs.forEach(r=>{if(!map[r.ac])map[r.ac]=[];map[r.ac].push(r);});
+  // Sort by provider name
+  return Object.entries(map).sort(([a],[b])=>getName(a).localeCompare(getName(b)));
+}
+
+function toggleExpand(tab,ac,e){
+  e.stopPropagation();
+  if(expanded[tab].has(ac)) expanded[tab].delete(ac);
+  else expanded[tab].add(ac);
+  if(tab==='agenda') renderAgenda();
+  else if(tab==='proxima') renderProxima();
+  else if(tab==='nodef') renderNoDef();
+  else if(tab==='sap') renderSAP();
+}
+
+function providerHeader(tab, ac, invs, opts={}){
+  const app=approvedSet();
+  const isExp=expanded[tab].has(ac);
+  const neto=invs.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
+  const apprCount=invs.filter(r=>app.has(r.doc)).length;
+  const allAppr=apprCount===invs.length;
+  const someAppr=apprCount>0&&!allAppr;
+  let statusBadge='';
+  if(opts.showApproval){
+    if(allAppr) statusBadge='<span class="bdg kd" style="font-size:11px">✓ Todas aprobadas</span>';
+    else if(someAppr) statusBadge='<span class="bdg ks" style="font-size:11px">'+apprCount+'/'+invs.length+' aprobadas</span>';
+    else statusBadge='<span class="bdg" style="background:var(--bg3);color:var(--text2);font-size:11px">'+invs.length+' pendiente'+(invs.length>1?'s':'')+'</span>';
+  } else {
+    statusBadge='<span class="bdg" style="background:var(--bg3);color:var(--text2);font-size:11px">'+invs.length+' doc'+(invs.length>1?'s':'')+'</span>';
+  }
+  const extra=opts.extraBtn||'';
+  const Q="'";
+  return '<div class="prov-hdr'+(isExp?' prov-hdr-open':'')+'" data-tab="'+tab+'" data-ac="'+ac+'" onclick="toggleExpand(this.dataset.tab,this.dataset.ac,event)">'
+    +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">'
+      +'<i class="ti ti-chevron-'+(isExp?'down':'right')+'" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>'
+      +'<div style="min-width:0">'
+        +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getName(ac)+'</div>'
+        +'<div style="font-size:11px;color:var(--text2);margin-top:1px">N° '+ac+'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+      +statusBadge
+      +'<div style="font-size:12px;font-weight:700;font-family:monospace">'+fm(neto)+'</div>'
+      +extra
+    +'</div>'
+  +'</div>';
+}
+
+// ─── AGENDA SELECTION ────────────────────────────────────────────────────────
+function selectAgenda(doc, checked){
+  if(checked) selectedAgenda.add(doc);
+  else selectedAgenda.delete(doc);
+  renderAgenda();
+}
+
+function clearAgendaSelection(){
+  selectedAgenda.clear();
+  renderAgenda();
+}
+
+function approveSelected(){
+  if(!selectedAgenda.size) return;
+  const s=new Set(state.approved);
+  selectedAgenda.forEach(doc=>s.add(doc));
+  state.approved=[...s];
+  selectedAgenda.clear();
+  schedSave();
+  renderAgenda();
+  setEl('badge-rep',state.approved.length);
+}
+
+function sendSelToProx(){
+  if(!selectedAgenda.size) return;
+  const prox=proxSet();
+  const toMove=state.sap.filter(r=>selectedAgenda.has(r.doc)&&!prox.has(r.doc));
+  if(!toMove.length){selectedAgenda.clear();renderAgenda();return;}
+  toMove.forEach(r=>state.proxima.push(r));
+  selectedAgenda.clear();
+  schedSave();
+  updateBadges();
+  renderAgenda();
+  renderProxima();
+}
 
 function renderMonthUI(){
   document.getElementById('month-label').textContent=MN[viewMonth]+' '+viewYear;
@@ -421,7 +517,7 @@ function renderMonthUI(){
   }).join('');
   renderAgenda();
 }
-function selWeek(i){activeWeekIdx=i;renderMonthUI();}
+function selWeek(i){activeWeekIdx=i;selectedAgenda.clear();renderMonthUI();}
 
 function getSemInvs(){
   const sem=activeWeekIdx+1;
@@ -458,29 +554,78 @@ function renderAgenda(){
     } else if(!invs.length){
       html='<div class="empty"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay documentos para este jueves</div>';
     } else {
-      if(pend.length){
-        html+='<div class="grp"><div class="grp-hdr"><span>Para revisar · '+pend.length+'</span>'
+      const nSel=selectedAgenda.size;
+      // Action bar: changes based on whether items are selected
+      if(nSel>0){
+        html+='<div style="background:var(--purple-bg);border:1px solid var(--purple);border-radius:var(--rl);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'
+          +'<span style="font-size:13px;font-weight:600;color:var(--purple)">'+nSel+' factura'+(nSel>1?'s':'')+' seleccionada'+(nSel>1?'s':'')+'</span>'
           +'<div class="btn-row">'
-          +'<button class="grp-btn purple-btn" onclick="openSendToProx()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>'
-          +'<button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>'
+          +'<button class="grp-btn" onclick="clearAgendaSelection()"><i class="ti ti-x"></i> Limpiar</button>'
+          +'<button class="grp-btn purple-btn" onclick="sendSelToProx()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>'
+          +'<button class="grp-btn" onclick="approveSelected()"><i class="ti ti-checks"></i> Aprobar seleccionadas</button>'
           +'</div></div>';
-        pend.forEach(inv=>{try{html+=rowHTML(inv,false,false);}catch(e){html+='<div class="inv-row"><div></div><div class="inv-sub" style="color:var(--red)">Error mostrando doc '+String(inv&&inv.doc||'?')+'</div></div>';}});
-        html+='</div>';
+      } else {
+        html+='<div class="grp-hdr" style="margin-bottom:8px"><span>'+invs.length+' docs · '+groupByAc(invs).length+' proveedores</span>'
+          +'<div class="btn-row">'
+          +'<button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>'
+          +'<button class="grp-btn red-btn" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar</button>'
+          +'</div></div>';
       }
-      if(appr.length){
-        html+='<div class="grp"><div class="grp-hdr"><span>Aprobadas · '+fm(neto)+'</span>'
-          +'<button class="grp-btn red-btn" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar todas</button></div>';
-        appr.forEach(inv=>{try{html+=rowHTML(inv,true,false);}catch(e){html+='<div class="inv-row done"><div></div><div class="inv-sub" style="color:var(--red)">Error mostrando doc '+String(inv&&inv.doc||'?')+'</div></div>';}});
+      // Group by provider
+      const app=approvedSet();
+      groupByAc(invs).forEach(([ac,acInvs])=>{
+        const isExp=expanded.agenda.has(ac);
+        const pendInvs=acInvs.filter(i=>!app.has(i.doc));
+        const apprInvs=acInvs.filter(i=>app.has(i.doc));
+        const selCount=acInvs.filter(i=>selectedAgenda.has(i.doc)).length;
+        // Build extra badge for selection state
+        let selBadge='';
+        if(selCount>0) selBadge='<span class="bdg" style="background:var(--purple-bg);color:var(--purple)">'+selCount+' sel.</span>';
+        html+=providerHeader('agenda',ac,acInvs,{showApproval:true,extraBtn:selBadge});
+        if(isExp){
+          html+='<div class="prov-invoices">';
+          // Pending rows: selectMode=true (goes to selectedAgenda)
+          pendInvs.forEach(inv=>{html+=rowHTML(inv,false,false,true);});
+          // Approved rows: selectMode=false (toggleApp to unapprove)
+          if(apprInvs.length){
+            html+='<div style="border-top:1px solid var(--green-bd);background:color-mix(in srgb,var(--green-bg) 20%,transparent);padding:4px 12px;font-size:11px;color:var(--green);font-weight:600">APROBADAS</div>';
+            apprInvs.forEach(inv=>{html+=rowHTML(inv,true,false,false);});
+          }
+          html+='</div>';
+        }
+      });
+      // Proveedores en agenda esta semana sin facturas en SAP
+      const sem=activeWeekIdx+1;
+      const agendaAcsThisWeek=Object.entries({...state.agenda,...state.userAssignments})
+        .filter(([,v])=>v&&(v.todas||(Array.isArray(v.sem)&&(v.sem.includes(sem)||(v.sem.includes(5)&&thursdays.length<5&&sem===4)))))
+        .map(([ac])=>ac);
+      const sapAcs=new Set(state.sap.map(r=>r.ac));
+      const missing=agendaAcsThisWeek.filter(ac=>!sapAcs.has(ac));
+      if(missing.length){
+        html+='<div style="margin-top:16px">'
+          +'<div class="grp-hdr"><span style="color:var(--text3)">Sin facturas en SAP esta semana · '+missing.length+'</span></div>';
+        missing.sort((a,b)=>getName(a).localeCompare(getName(b))).forEach(ac=>{
+          html+='<div class="prov-hdr" style="opacity:.55;cursor:default;pointer-events:none">'
+            +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">'
+              +'<i class="ti ti-file-off" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>'
+              +'<div style="min-width:0">'
+                +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getName(ac)+'</div>'
+                +'<div style="font-size:11px;color:var(--text3)">N° '+ac+'</div>'
+              +'</div>'
+            +'</div>'
+            +'<span class="bdg" style="background:var(--bg3);color:var(--text3)">Sin facturas SAP</span>'
+          +'</div>';
+        });
         html+='</div>';
       }
     }
   }catch(e){
-    html='<div class="empty" style="color:var(--red)"><i class="ti ti-alert-circle" style="font-size:28px;display:block;margin-bottom:8px"></i>Error al mostrar la agenda: '+e.message+'<br><small>Intentá borrar y reimportar los datos SAP</small></div>';
+    html='<div class="empty" style="color:var(--red)"><i class="ti ti-alert-circle" style="font-size:28px;display:block;margin-bottom:8px"></i>Error: '+e.message+'</div>';
   }
   document.getElementById('agenda-body').innerHTML=html;
 }
 
-function rowHTML(inv,done,isProxima){
+function rowHTML(inv,done,isProxima,selectMode){
   if(!inv) return '';
   const isCredit=(inv.signo||0)>0;
   const doc=String(inv.doc||'').replace(/`/g,'');
@@ -490,11 +635,12 @@ function rowHTML(inv,done,isProxima){
   const imp=isFinite(inv.imp)?inv.imp:0;
   const clCss=cl.toLowerCase().replace(/[^a-z0-9]/g,'');
   const rowCls=['inv-row',done?'done':'',isCredit?'credit':'',isProxima?'prox-row':''].filter(Boolean).join(' ');
-  const chk=done?'checked':'';
+  const chk=selectMode?selectedAgenda.has(doc)?'checked':'':done?'checked':'';
+  const onchangeFn=selectMode?'selectAgenda':'toggleApp';
   const amtStyle=isCredit?'color:var(--green)':'';
   const nc=isCredit?'<span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':'';
   return `<div class="${rowCls}">
-    <input type="checkbox" class="inv-check" ${chk} data-doc="${doc}" onchange="toggleApp(this.dataset.doc,this.checked)">
+    <input type="checkbox" class="inv-check" ${chk} data-doc="${doc}" onchange="${onchangeFn}(this.dataset.doc,this.checked)">
     <div style="min-width:0">
       <div class="inv-name">${getName(ac)}${nc}</div>
       <div class="inv-sub">N° ${ac} · ${doc} · ${String(inv.fecha||'')} · ${txt}</div>
@@ -583,43 +729,38 @@ function renderProxima(){
   setEl('badge-prox',invs.length);
 
   if(!invs.length){
-    document.getElementById('proxima-body').innerHTML=`<div class="empty"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay facturas en próxima semana</div>`;
+    document.getElementById('proxima-body').innerHTML='<div class="empty"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay facturas en próxima semana</div>';
     return;
   }
   let html='';
-  if(pend.length){
-    html+=`<div class="grp"><div class="grp-hdr">
-      <span>Pendientes · ${pend.length}</span>
-      <div class="btn-row">
-        <button class="grp-btn" onclick="returnAllFromProx()"><i class="ti ti-arrow-left"></i> Devolver a esta semana</button>
-        <button class="grp-btn" onclick="approveAllProx()"><i class="ti ti-checks"></i> Aprobar todas</button>
-      </div></div>`;
-    pend.forEach(inv=>{
-      const isCredit=inv.signo>0;
-      html+=`<div class="inv-row prox-row${app.has(inv.doc)?' done':''}">
-        <input type="checkbox" class="inv-check" ${app.has(inv.doc)?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
-        <div style="min-width:0">
-          <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
-          <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
-        </div>
-        <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
-        <div style="display:flex;gap:5px;align-items:center">
-          <span class="bdg ${inv.cl.toLowerCase()}">${inv.cl}</span>
-          <button class="grp-btn" style="padding:2px 7px" onclick="returnFromProx('${inv.doc}')"><i class="ti ti-arrow-left"></i></button>
-        </div>
-      </div>`;
-    });
-    html+='</div>';
-  }
-  if(appr.length){
-    html+=`<div class="grp"><div class="grp-hdr"><span>Aprobadas · ${fm(neto)}</span>
-      <button class="grp-btn red-btn" onclick="unapproveAllProx()"><i class="ti ti-x"></i> Desaprobar</button></div>`;
-    appr.forEach(inv=>{html+=rowHTML(inv,true,true);});
-    html+='</div>';
-  }
+  html+='<div class="grp-hdr" style="margin-bottom:8px"><span>'+invs.length+' docs · '+groupByAc(invs).length+' proveedores</span>'
+    +'<div class="btn-row">'
+    +'<button class="grp-btn" onclick="returnAllFromProx()"><i class="ti ti-arrow-left"></i> Devolver todas</button>'
+    +'<button class="grp-btn" onclick="approveAllProx()"><i class="ti ti-checks"></i> Aprobar todas</button>'
+    +'<button class="grp-btn red-btn" onclick="unapproveAllProx()"><i class="ti ti-x"></i> Desaprobar</button>'
+    +'</div></div>';
+  groupByAc(invs).forEach(([ac,acInvs])=>{
+    const isExp=expanded.proxima.has(ac);
+    const extraBtn='<button class="grp-btn" style="padding:2px 8px" data-ac="'+ac+'" onclick="returnProvFromProx(this.dataset.ac,event)" title="Devolver a agenda"><i class="ti ti-arrow-left"></i></button>';
+    html+=providerHeader('proxima',ac,acInvs,{showApproval:true,extraBtn});
+    if(isExp){
+      html+='<div class="prov-invoices">';
+      acInvs.forEach(inv=>{
+        const isCredit=(inv.signo||0)>0;
+        const doc=String(inv.doc||'');
+        html+=rowHTML(inv,app.has(inv.doc),true);
+      });
+      html+='</div>';
+    }
+  });
   document.getElementById('proxima-body').innerHTML=html;
 }
 
+function returnProvFromProx(ac,e){
+  e.stopPropagation();
+  state.proxima=state.proxima.filter(r=>r.ac!==ac);
+  schedSave();updateBadges();renderProxima();renderAgenda();
+}
 function returnFromProx(doc){
   state.proxima=state.proxima.filter(r=>r.doc!==doc);
   schedSave();updateBadges();renderProxima();renderAgenda();
@@ -660,17 +801,41 @@ function renderNoDef(){
     const invs=state.sap.filter(r=>r.ac===ac);
     const neto=invs.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
     const ua=state.userAssignments[ac];
-    html+=`<div class="inv-row nodef-row" style="grid-template-columns:1fr auto auto">
-      <div style="min-width:0">
-        <div class="inv-name">${getName(ac)} <span style="font-size:10px;color:var(--text3);font-weight:400">N° ${ac}</span></div>
-        <div class="inv-sub">${invs.length} doc${invs.length>1?'s':''} · ${invs.slice(0,2).map(i=>i.doc).join(', ')}</div>
-        ${ua?`<span class="bdg kd" style="margin-top:4px;display:inline-block">Sem.: ${ua.todas?'Todas':ua.sem.map(s=>[,'1ra','2da','3ra','4ta','Última'][s]).join(', ')}</span>`:''}
-      </div>
-      <div class="inv-amt">${fm(neto)}</div>
-      <button class="btn" onclick="openAssign('${ac}')"><i class="ti ti-calendar-plus"></i> Asignar</button>
-    </div>`;
+    const isExp=expanded.nodef.has(ac);
+    const semLabel=ua?(ua.todas?'Todas':ua.sem.map(s=>[,'1ra','2da','3ra','4ta','Última'][s]).join(', ')):'';
+    const assignBtn='<button class="btn" data-ac="'+ac+'" onclick="openAssign(this.dataset.ac)" style="flex-shrink:0"><i class="ti ti-calendar-plus"></i> Asignar</button>';
+    html+='<div class="prov-hdr nodef-row'+(isExp?' prov-hdr-open':'')+'" data-tab="nodef" data-ac="'+ac+'" onclick="toggleExpand(this.dataset.tab,this.dataset.ac,event)">'
+      +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">'
+        +'<i class="ti ti-chevron-'+(isExp?'down':'right')+'" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>'
+        +'<div style="min-width:0">'
+          +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getName(ac)+'<span style="font-size:10px;color:var(--text3);font-weight:400;margin-left:6px">N° '+ac+'</span></div>'
+          +(semLabel?'<div style="margin-top:2px"><span class="bdg kd">Sem.: '+semLabel+'</span></div>':'')
+        +'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+        +'<span class="bdg" style="background:var(--bg3);color:var(--text2)">'+invs.length+' doc'+(invs.length>1?'s':'')+'</span>'
+        +'<div style="font-size:12px;font-weight:700;font-family:monospace">'+fm(neto)+'</div>'
+        +assignBtn
+      +'</div>'
+    +'</div>';
+    if(isExp){
+      html+='<div class="prov-invoices">';
+      invs.forEach(inv=>{
+        const isCredit=(inv.signo||0)>0;
+        html+='<div class="inv-row" style="border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:0.5px solid var(--border);margin-bottom:0">'
+          +'<div></div>'
+          +'<div style="min-width:0">'
+            +'<div style="font-size:12px;font-weight:500">'+String(inv.doc||'')+'<span class="bdg '+String(inv.cl||'').toLowerCase()+'" style="margin-left:6px">'+String(inv.cl||'')+'</span></div>'
+            +'<div style="font-size:11px;color:var(--text2)">'+String(inv.fecha||'')+' · '+String(inv.txt||'')+'</div>'
+          +'</div>'
+          +'<div class="inv-amt" style="'+(isCredit?'color:var(--green)':'')+'">'+fm(inv.imp)+'</div>'
+          +'<div></div>'
+        +'</div>';
+      });
+      html+='</div>';
+    }
   });
-  if(!nodef.size)html=`<div class="empty"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px"></i>Todos los acreedores tienen semana asignada</div>`;
+  if(!nodef.size)html='<div class="empty"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px"></i>Todos los acreedores tienen semana asignada</div>';
   document.getElementById('nodef-body').innerHTML=html;
 }
 
@@ -680,8 +845,8 @@ function renderSAP(){
   const cls=[...new Set(state.sap.map(r=>r.cl))].sort();
   const app=approvedSet();
   document.getElementById('sap-chips').innerHTML=
-    `<button class="chip${sapFilter==='all'?' on':''}" onclick="setSap('all')">Todo</button>`
-    +cls.map(c=>`<button class="chip${sapFilter===c?' on':''}" onclick="setSap('${c}')">${c}</button>`).join('');
+    '<button class="chip'+(sapFilter==='all'?' on':'')+'" data-f="all" onclick="setSap(this.dataset.f)">Todo</button>'
+    +cls.map(c=>'<button class="chip'+(sapFilter===c?' on':'')+'" data-f="'+c+'" onclick="setSap(this.dataset.f)">'+c+'</button>').join('');
 
   const rows=state.sap.filter(r=>{
     const mq=!q||r.ac.includes(q)||r.doc.includes(q)||(r.txt||'').toLowerCase().includes(q)||getName(r.ac).toLowerCase().includes(q);
@@ -689,48 +854,60 @@ function renderSAP(){
   });
   const neto=rows.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
   const selCount=rows.filter(r=>app.has(r.doc)).length;
+  const groups=groupByAc(rows);
 
-  if(!rows.length){document.getElementById('sap-body').innerHTML=`<div class="empty">Sin resultados</div>`;return;}
+  if(!rows.length){document.getElementById('sap-body').innerHTML='<div class="empty">Sin resultados</div>';return;}
 
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-    <p style="font-size:12px;color:var(--text2)">${rows.length} docs · Neto: ${fm(neto)}</p>
-    <div class="btn-row">
-      <span style="font-size:12px;color:var(--text2);align-self:center">${selCount} sel.</span>
-      <button class="btn" onclick="sapSelectAll(true)"><i class="ti ti-checks"></i> Sel. todas</button>
-      <button class="btn" onclick="sapSelectAll(false)"><i class="ti ti-x"></i> Desel.</button>
-      <button class="btn prim" onclick="sapAddToReport()"><i class="ti ti-send"></i> Agregar al reporte</button>
-    </div>
-  </div>
-  <div class="tbl-wrap"><table><thead><tr>
-    <th style="width:28px"><input type="checkbox" id="sap-chk-all" onchange="sapSelectAll(this.checked)" style="accent-color:var(--text)"></th>
-    <th style="width:60px">Acreedor</th>
-    <th style="width:155px">Nombre</th>
-    <th style="width:46px">Tipo</th>
-    <th style="width:94px">Documento</th>
-    <th style="width:80px">Fecha</th>
-    <th>Concepto</th>
-    <th style="width:96px;text-align:right">Importe</th>
-    <th style="width:55px">Sem.</th>
-  </tr></thead><tbody>`;
+  let html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">'
+    +'<p style="font-size:12px;color:var(--text2)">'+rows.length+' docs · '+groups.length+' proveedores · Neto: '+fm(neto)+'</p>'
+    +'<div class="btn-row">'
+    +'<span style="font-size:12px;color:var(--text2);align-self:center">'+selCount+' sel.</span>'
+    +'<button class="btn" onclick="sapSelectAll(true)"><i class="ti ti-checks"></i> Sel. todas</button>'
+    +'<button class="btn" onclick="sapSelectAll(false)"><i class="ti ti-x"></i> Desel.</button>'
+    +'<button class="btn prim" onclick="sapAddToReport()"><i class="ti ti-send"></i> Agregar al reporte</button>'
+    +'</div></div>';
 
-  rows.forEach(r=>{
-    const ag=getAgendaForAc(r.ac);
+  groups.forEach(([ac,acRows])=>{
+    const isExp=expanded.sap.has(ac);
+    const ag=getAgendaForAc(ac);
     const semTxt=ag?(ag.todas?'Todas':ag.sem.map(s=>[,'1°','2°','3°','4°','ú.'][s]).join(',')):'—';
-    const isCredit=r.signo>0;
-    const checked=app.has(r.doc);
-    html+=`<tr class="${checked?'tr-sel':''}" id="tr-${r.doc}">
-      <td><input type="checkbox" class="sap-row-chk" data-doc="${r.doc}" ${checked?'checked':''} onchange="sapRowToggle('${r.doc}',this.checked)" style="accent-color:var(--text)"></td>
-      <td style="font-family:monospace">${r.ac}</td>
-      <td title="${getName(r.ac)}">${getName(r.ac)}</td>
-      <td><span class="bdg ${r.cl.toLowerCase()}">${r.cl}</span></td>
-      <td style="font-family:monospace">${r.doc}</td>
-      <td>${r.fecha}</td>
-      <td title="${r.txt}" style="${isCredit?'color:var(--green)':''}">${r.txt||'—'}</td>
-      <td style="text-align:right;font-family:monospace;${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(r.imp)}</td>
-      <td style="font-size:11px;color:${ag?'var(--text)':'var(--red)'}">${semTxt}</td>
-    </tr>`;
+    const semColor=ag?'var(--text)':'var(--red)';
+    const acNeto=acRows.reduce((s,r)=>s+(r.signo<0?r.imp:-r.imp),0);
+    const acSel=acRows.filter(r=>app.has(r.doc)).length;
+    // Provider header
+    html+='<div class="prov-hdr'+(isExp?' prov-hdr-open':'')+'" data-tab="sap" data-ac="'+ac+'" onclick="toggleExpand(this.dataset.tab,this.dataset.ac,event)">'
+      +'<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">'
+        +'<i class="ti ti-chevron-'+(isExp?'down':'right')+'" style="font-size:14px;color:var(--text3);flex-shrink:0"></i>'
+        +'<div style="min-width:0">'
+          +'<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getName(ac)+'</div>'
+          +'<div style="font-size:11px;color:var(--text2)">N° '+ac+' · <span style="color:'+semColor+'">Sem. '+semTxt+'</span></div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+        +(acSel>0?'<span class="bdg kb">'+acSel+'/'+acRows.length+' sel.</span>':'<span class="bdg" style="background:var(--bg3);color:var(--text2)">'+acRows.length+' doc'+(acRows.length>1?'s':'')+'</span>')
+        +'<div style="font-size:12px;font-weight:700;font-family:monospace">'+fm(acNeto)+'</div>'
+      +'</div>'
+    +'</div>';
+    if(isExp){
+      html+='<div class="prov-invoices">';
+      acRows.forEach(r=>{
+        const isCredit=(r.signo||0)>0;
+        const doc=String(r.doc||'');
+        const checked=app.has(doc);
+        const clCss=String(r.cl||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        html+='<div class="inv-row'+(checked?' done':'')+(isCredit?' credit':'')+'" style="border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:0.5px solid var(--border);margin-bottom:0">'
+          +'<input type="checkbox" class="inv-check sap-row-chk" data-doc="'+doc+'" '+(checked?'checked ':'')+' onchange="sapRowToggle(this.dataset.doc,this.checked)" style="accent-color:var(--text)">'
+          +'<div style="min-width:0">'
+            +'<div style="font-size:12px;font-weight:500">'+doc+'<span class="bdg '+clCss+'" style="margin-left:6px">'+String(r.cl||'')+'</span>'+(isCredit?' <span class="bdg kd">NC</span>':'')+'</div>'
+            +'<div style="font-size:11px;color:var(--text2)">'+String(r.fecha||'')+' · '+String(r.txt||'')+'</div>'
+          +'</div>'
+          +'<div class="inv-amt" style="'+(isCredit?'color:var(--green)':'')+'">'+fm(r.imp)+'</div>'
+          +'<div></div>'
+        +'</div>';
+      });
+      html+='</div>';
+    }
   });
-  html+=`</tbody><tfoot><tr><td></td><td colspan="6" style="text-align:right">Neto total</td><td style="text-align:right;font-family:monospace">${fm(neto)}</td><td></td></tr></tfoot></table></div>`;
   document.getElementById('sap-body').innerHTML=html;
 }
 function setSap(f){sapFilter=f;renderSAP();}
