@@ -449,7 +449,7 @@ function renderAgenda(){
     <div class="stat"><div class="stat-lbl">Aprobados</div><div class="stat-val c-green">${appr.length}</div></div>
     <div class="stat"><div class="stat-lbl">Pendientes</div><div class="stat-val c-amber">${pend.length}</div></div>
     <div class="stat"><div class="stat-lbl">Neto aprobado</div><div class="stat-val c-blue" style="font-size:13px;padding-top:3px">${fm(neto)}</div></div>`;
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 
   let html='';
   try{
@@ -506,19 +506,19 @@ function toggleApp(doc,checked){
   if(checked)s.add(doc);else s.delete(doc);
   state.approved=[...s];
   schedSave();renderAgenda();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 function approveAll(){
   const s=new Set(state.approved);
   getSemInvs().forEach(i=>s.add(i.doc));
   state.approved=[...s];schedSave();renderAgenda();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 function unapproveAll(){
   const s=new Set(state.approved);
   getSemInvs().forEach(i=>s.delete(i.doc));
   state.approved=[...s];schedSave();renderAgenda();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 
 // ─── PASAR A PRÓXIMA SEMANA ───────────────────────────────────────────────────
@@ -577,7 +577,7 @@ function renderProxima(){
   const appr=invs.filter(i=>app.has(i.doc));
   const pend=invs.filter(i=>!app.has(i.doc));
   const neto=appr.reduce((s,i)=>s+(i.signo<0?i.imp:-i.imp),0);
-  document.getElementById('badge-prox').textContent=invs.length;
+  setEl('badge-prox',invs.length);
 
   if(!invs.length){
     document.getElementById('proxima-body').innerHTML=`<div class="empty"><i class="ti ti-check" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay facturas en próxima semana</div>`;
@@ -629,29 +629,29 @@ function approveAllProx(){
   const s=new Set(state.approved);
   state.proxima.forEach(i=>s.add(i.doc));
   state.approved=[...s];schedSave();renderProxima();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 function unapproveAllProx(){
   const s=new Set(state.approved);
   state.proxima.forEach(i=>s.delete(i.doc));
   state.approved=[...s];schedSave();renderProxima();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 
 function updateBadges(){
-  document.getElementById('badge-prox').textContent=state.proxima.length;
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-prox',state.proxima.length);
+  setEl('badge-rep',state.approved.length);
   const agAcs=new Set(Object.keys(state.agenda));
   const nodef=new Set();
   state.sap.forEach(r=>{if(!agAcs.has(r.ac)&&!state.userAssignments[r.ac])nodef.add(r.ac);});
-  document.getElementById('badge-nd').textContent=nodef.size;
+  setEl('badge-nd',nodef.size);
 }
 
 // ─── SIN SEMANA ───────────────────────────────────────────────────────────────
 function renderNoDef(){
   const nodef=new Set();
   state.sap.forEach(r=>{if(!getAgendaForAc(r.ac))nodef.add(r.ac);});
-  document.getElementById('badge-nd').textContent=nodef.size;
+  setEl('badge-nd',nodef.size);
   let html='';
   [...nodef].sort((a,b)=>getName(a).localeCompare(getName(b))).forEach(ac=>{
     const invs=state.sap.filter(r=>r.ac===ac);
@@ -744,7 +744,7 @@ function sapRowToggle(doc,checked){
   if(checked)s.add(doc);else s.delete(doc);
   state.approved=[...s];
   schedSave();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
   const row=document.getElementById('tr-'+doc);
   if(row)row.classList.toggle('tr-sel',checked);
   // update counter
@@ -760,7 +760,7 @@ function sapSelectAll(checked){
   docs.forEach(d=>checked?s.add(d):s.delete(d));
   state.approved=[...s];
   schedSave();renderSAP();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
 }
 function sapAddToReport(){
   switchTab('reporte');
@@ -775,15 +775,17 @@ function setStatus(id,ok,msg){
 function parseExcelRows(file,cb){
   const reader=new FileReader();
   reader.onload=ev=>{
+    let rows=null,err=null;
     try{
-      // Try array buffer first (best compatibility for .xlsx, .xls, SpreadsheetML XML)
       const data=new Uint8Array(ev.target.result);
       const wb=XLSX.read(data,{type:'array',cellDates:true,raw:false});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
-      cb(null,rows);
-    }catch(e){cb(e,null);}
+      rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    }catch(e){err=e;}
+    // Call cb OUTSIDE the try-catch so errors in the callback don't get caught here
+    cb(err,rows);
   };
+  reader.onerror=()=>cb(new Error('No se pudo leer el archivo'),null);
   reader.readAsArrayBuffer(file);
 }
 
@@ -973,18 +975,19 @@ function doDeleteSAP(removeProxima){
   setStatus('st-sap',true,removeProxima?'Datos SAP y Próxima semana eliminados.':'Datos SAP eliminados. Las facturas de Próxima semana se mantienen.');
 }
 
+function setEl(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+function showEl(id,show){const el=document.getElementById(id);if(el)el.style.display=show?'flex':'none';}
+
 function updateDangers(){
-  // SAP
-  const sapD=document.getElementById('sap-danger');
-  if(sapD){if(state.sap.length){sapD.style.display='flex';document.getElementById('sap-count').textContent=state.sap.length;}else sapD.style.display='none';}
-  // Agenda
-  const agD=document.getElementById('agenda-danger');
+  const sapCount=state.sap.length;
+  showEl('sap-danger',sapCount>0);
+  if(sapCount>0) setEl('sap-count',sapCount);
   const agCount=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
-  if(agD){if(agCount){agD.style.display='flex';document.getElementById('agenda-count').textContent=agCount;}else agD.style.display='none';}
-  // Maestro
-  const mD=document.getElementById('maestro-danger');
+  showEl('agenda-danger',agCount>0);
+  if(agCount>0) setEl('agenda-count',agCount);
   const mCount=Object.keys(state.maestro).length;
-  if(mD){if(mCount){mD.style.display='flex';document.getElementById('maestro-count').textContent=mCount;}else mD.style.display='none';}
+  showEl('maestro-danger',mCount>0);
+  if(mCount>0) setEl('maestro-count',mCount);
 }
 
 function renderDataStatus(){
@@ -992,10 +995,11 @@ function renderDataStatus(){
   const mC=Object.keys(state.maestro).length;
   const aC=Object.keys(state.agenda).length+Object.keys(state.userAssignments).length;
   const sC=state.sap.length;
-  document.getElementById('data-status').innerHTML=`
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-users"></i> Maestro</div><div class="stat-val c-blue">${mC}</div><div style="font-size:11px;color:var(--text2)">${mC?'proveedores':'Sin cargar'}</div></div>
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-calendar"></i> Agenda</div><div class="stat-val c-amber">${aC}</div><div style="font-size:11px;color:var(--text2)">${aC?'configurados':'Sin cargar'}</div></div>
-    <div class="stat"><div class="stat-lbl"><i class="ti ti-file-invoice"></i> SAP</div><div class="stat-val c-green">${sC}</div><div style="font-size:11px;color:var(--text2)">${sC?'documentos':'Sin cargar'}</div></div>`;
+  const el=document.getElementById('data-status');
+  if(el) el.innerHTML=
+    '<div class="stat"><div class="stat-lbl"><i class="ti ti-users"></i> Maestro</div><div class="stat-val c-blue">'+mC+'</div><div style="font-size:11px;color:var(--text2)">'+(mC?'proveedores':'Sin cargar')+'</div></div>'
+   +'<div class="stat"><div class="stat-lbl"><i class="ti ti-calendar"></i> Agenda</div><div class="stat-val c-amber">'+aC+'</div><div style="font-size:11px;color:var(--text2)">'+(aC?'configurados':'Sin cargar')+'</div></div>'
+   +'<div class="stat"><div class="stat-lbl"><i class="ti ti-file-invoice"></i> SAP</div><div class="stat-val c-green">'+sC+'</div><div style="font-size:11px;color:var(--text2)">'+(sC?'documentos':'Sin cargar')+'</div></div>';
 }
 
 // ─── REPORTE ─────────────────────────────────────────────────────────────────
@@ -1074,7 +1078,7 @@ function repRowToggle(doc,checked){
   if(checked)s.add(doc);else s.delete(doc);
   state.approved=[...s];
   schedSave();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
   renderReporte();
 }
 
@@ -1084,7 +1088,7 @@ function repRemove(doc){
   s.delete(doc);
   state.approved=[...s];
   schedSave();
-  document.getElementById('badge-rep').textContent=state.approved.length;
+  setEl('badge-rep',state.approved.length);
   renderReporte();
 }
 
