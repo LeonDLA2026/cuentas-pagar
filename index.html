@@ -338,7 +338,21 @@ function mergeState(s){
   if(s.sap)state.sap=s.sap;
   if(s.proxima)state.proxima=s.proxima;
   if(s.approved)state.approved=s.approved;
-  if(s.userAssignments)state.userAssignments=s.userAssignments;
+  if(s.userAssignments){
+    // Normalize: old format stored arrays, new format stores {sem,todas}
+    const ua={};
+    Object.entries(s.userAssignments).forEach(([ac,v])=>{
+      if(Array.isArray(v)) ua[ac]={sem:v,todas:false};
+      else ua[ac]=v;
+    });
+    state.userAssignments=ua;
+  }
+  // Also normalize agenda entries
+  if(state.agenda){
+    Object.entries(state.agenda).forEach(([ac,v])=>{
+      if(Array.isArray(v)) state.agenda[ac]={sem:v,todas:false};
+    });
+  }
 }
 let saveTimer=null;
 function schedSave(){clearTimeout(saveTimer);saveTimer=setTimeout(doSave,900);}
@@ -419,7 +433,8 @@ function getSemInvs(){
     if(!ag)return false;
     // Semana 5 (ultima): si el mes tiene <5 jueves, usar semana 4
     if(ag.sem&&ag.sem.includes(5)&&thursdays.length<5&&sem===4)return true;
-    return ag.todas||( ag.sem&&ag.sem.includes(sem) );
+    if(ag.todas) return true;
+    return Array.isArray(ag.sem)&&ag.sem.includes(sem);
   });
 }
 
@@ -844,15 +859,6 @@ function importSAP(e){
     }
     if(!parsed.length){setStatus('st-sap',false,'No se encontraron documentos. Verificá el formato.');e.target.value='';return;}
 
-    // Alerta saldos netos positivos
-    const saldos={};
-    parsed.forEach(r=>{saldos[r.ac]=(saldos[r.ac]||0)+(r.signo<0?-r.imp:r.imp);});
-    const aFavor=Object.entries(saldos).filter(([,v])=>v>0);
-    if(aFavor.length){
-      const lista=aFavor.map(([ac,v])=>`• ${getName(ac)} (N°${ac}): $${Math.round(v).toLocaleString('es-AR')}`).join('\n');
-      alert(`⚠️ Saldo neto POSITIVO (empresa en crédito):\n\n${lista}\n\nRevisá si hay notas de crédito o pagos no compensados.`);
-    }
-
     // Limpiar aprobaciones que ya no existen en el nuevo SAP
     const docSet=new Set(parsed.map(r=>r.doc));
     state.approved=state.approved.filter(d=>docSet.has(d));
@@ -942,6 +948,15 @@ function renderReporte(){
     document.getElementById('rep-body').innerHTML=`<div class="empty"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px"></i>Aprobá documentos en la agenda para generar el reporte</div>`;
     return;
   }
+  // Detectar proveedores con saldo neto positivo (NC > facturas) entre los aprobados
+  const saldosPorAc={};
+  uniq.forEach(r=>{saldosPorAc[r.ac]=(saldosPorAc[r.ac]||0)+(r.signo<0?r.imp:-r.imp);});
+  const acredores=Object.entries(saldosPorAc).filter(([,v])=>v<0); // neto negativo = empresa en crédito
+  let warningHtml='';
+  if(acredores.length){
+    const lista=acredores.map(([ac,v])=>`<strong>${getName(ac)}</strong> (N°${ac}): $${Math.round(Math.abs(v)).toLocaleString('es-AR')} a favor`).join(' · ');
+    warningHtml=`<div style="background:var(--red-bg);border-left:3px solid var(--red);border-radius:0 var(--r) var(--r) 0;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--red)"><i class="ti ti-alert-triangle"></i> <strong>Saldo a favor de la empresa</strong> — Las notas de crédito superan las facturas para: ${lista}. Revisá antes de enviar.</div>`;
+  }
   const proxDocs=proxSet();
   let html=`<div class="rep-actions">
     <p style="font-size:13px;color:var(--text2)">Jueves ${fd(thu)} · ${uniq.length} docs · Neto: <strong>${fm(neto)}</strong></p>
@@ -950,6 +965,7 @@ function renderReporte(){
       <button class="btn prim" onclick="downloadCSV()"><i class="ti ti-download"></i> Descargar CSV</button>
     </div>
   </div>
+  ${warningHtml}
   <div class="tbl-wrap"><table><thead><tr>
     <th style="width:28px"></th>
     <th style="width:62px">N° Prov.</th><th style="width:145px">Nombre</th><th style="width:46px">Tipo</th>
@@ -961,24 +977,26 @@ function renderReporte(){
     const cbu=getCBU(r.ac);
     const isCredit=r.signo>0;
     const isInProx=proxDocs.has(r.doc);
+    const doc=r.doc;
+    const cbuHtml=cbu&&cbu!=='VEP'?cbu:cbu==='VEP'?'<span style="color:var(--amber)">VEP</span>':'<span style="color:var(--red)">Sin CBU</span>';
+    let moveBtn='';
+    const q="'";
+    if(isInProx){
+      moveBtn='<button class="grp-btn" title="Volver a agenda" onclick="repReturnToAgenda('+q+doc+q+')"><i class="ti ti-arrow-left"></i></button>';
+    } else {
+      moveBtn='<button class="grp-btn purple-btn" title="Pasar a próxima semana" onclick="repSendToProx('+q+doc+q+')"><i class="ti ti-arrow-right"></i></button>';
+    }
+    const removeBtn='<button class="grp-btn red-btn" title="Quitar del reporte" onclick="repRemove('+q+doc+q+')"><i class="ti ti-x"></i></button>';
     html+=`<tr style="${isCredit?'color:var(--green)':''}">
-      <td><input type="checkbox" class="rep-chk" data-doc="${r.doc}" checked onchange="repRowToggle('${r.doc}',this.checked)" style="accent-color:var(--text);width:14px;height:14px"></td>
+      <td><input type="checkbox" class="rep-chk" data-doc="${doc}" checked onchange="repRowToggle('${doc}',this.checked)" style="accent-color:var(--text);width:14px;height:14px"></td>
       <td style="font-family:monospace">${r.ac}</td>
       <td title="${getName(r.ac)}">${getName(r.ac)}</td>
       <td><span class="bdg ${r.cl.toLowerCase()}">${r.cl}</span></td>
-      <td style="font-family:monospace">${r.doc}</td>
+      <td style="font-family:monospace">${doc}</td>
       <td title="${r.txt}">${r.txt||'—'}</td>
-      <td style="font-family:monospace;font-size:10px">${cbu&&cbu!=='VEP'?cbu:cbu==='VEP'?'<span style="color:var(--amber)">VEP</span>':'<span style="color:var(--red)">Sin CBU</span>'}</td>
+      <td style="font-family:monospace;font-size:10px">${cbuHtml}</td>
       <td style="text-align:right;font-family:monospace">${isCredit?'-':''}${fm(r.imp)}</td>
-      <td>
-        <div style="display:flex;gap:3px">
-          ${isInProx
-            ? `<button class="grp-btn" title="Volver a agenda" onclick="repReturnToAgenda('${r.doc}')"><i class="ti ti-arrow-left"></i></button>`
-            : `<button class="grp-btn purple-btn" title="Pasar a próxima semana" onclick="repSendToProx('${r.doc}')"><i class="ti ti-arrow-right"></i></button>`
-          }
-          <button class="grp-btn red-btn" title="Quitar del reporte" onclick="repRemove('${r.doc}')"><i class="ti ti-x"></i></button>
-        </div>
-      </td>
+      <td><div style="display:flex;gap:3px">${moveBtn}${removeBtn}</div></td>
     </tr>`;
   });
   html+=`</tbody><tfoot><tr><td></td><td colspan="5" style="text-align:right">Neto total</td><td></td><td style="text-align:right;font-family:monospace">${fm(neto)}</td><td></td></tr></tfoot></table></div>`;
