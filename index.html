@@ -800,30 +800,41 @@ function importMaestro(e){
 function importAgenda(e){
   const file=e.target.files[0];if(!file)return;
   parseExcelRows(file,(err,rows)=>{
-    if(err){setStatus('st-agenda',false,'Error al leer el archivo');return;}
+    if(err){setStatus('st-agenda',false,'Error al leer el archivo: '+err.message);return;}
     const agenda={};
-    // Siempre saltar fila 0 (encabezados)
+    // Fila 0 siempre es encabezado (N°, Semana). Desde fila 1 en adelante son datos.
+    // Un mismo acreedor puede aparecer en múltiples filas (una por semana).
     for(let i=1;i<rows.length;i++){
       const r=rows[i];
-      const ac=String(r[0]||'').trim();
-      if(!ac)continue;
+      const acRaw=String(r[0]||'').trim();
+      if(!acRaw||acRaw===''||acRaw==='null')continue;
+      // Normalizar: quitar decimales si viene como "700238.0"
+      let ac=acRaw;
+      try{ ac=String(parseInt(parseFloat(acRaw))); } catch(e){}
+      if(!ac||ac==='NaN')continue;
       const semRaw=String(r[1]||'').trim();
       const semNum=parseInt(semRaw);
       if(isNaN(semNum))continue;
       if(semNum===0){
+        // Semana 0 = todas las semanas
         agenda[ac]={sem:[1,2,3,4,5],todas:true};
       } else if(semNum>=1&&semNum<=5){
-        // Semana 5 (última) se trata especialmente en getSemInvs
-        agenda[ac]={sem:[semNum],todas:false};
+        // Acumular semanas (puede haber múltiples filas para el mismo acreedor)
+        if(!agenda[ac]){
+          agenda[ac]={sem:[semNum],todas:false};
+        } else if(!agenda[ac].todas){
+          if(!agenda[ac].sem.includes(semNum)) agenda[ac].sem.push(semNum);
+          agenda[ac].sem.sort();
+        }
       }
     }
     const total=Object.keys(agenda).length;
-    if(!total){setStatus('st-agenda',false,'No se encontraron filas válidas. Verificá que la Col A sea el N° acreedor y la Col B sea 0–5.');e.target.value='';return;}
+    if(!total){setStatus('st-agenda',false,'No se encontraron filas válidas. Verificá: Col A = N° acreedor, Col B = semana (0–5), fila 1 = encabezados.');e.target.value='';return;}
     state.agenda=agenda;
-    // Limpiar userAssignments que ya están en la agenda
+    // Limpiar userAssignments solapados con la agenda importada
     Object.keys(state.agenda).forEach(ac=>{delete state.userAssignments[ac];});
     schedSave();renderDataStatus();renderNoDef();renderAgenda();
-    setStatus('st-agenda',true,`✓ ${total} proveedores en agenda`);
+    setStatus('st-agenda',true,`✓ ${total} proveedores importados`);
     e.target.value='';
   });
 }
@@ -847,15 +858,40 @@ function importSAP(e){
       const fechaRaw=r[4];
       const importeRaw=r[6];
       const txt=String(r[8]||'').trim();
-      if(!ac||!cl||!doc)continue;
-      const imp=parseFloat(String(importeRaw).replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,''))||0;
+      if(!ac||!cl||!doc||ac==='Acreedor')continue;
+      // Normalizar acreedor (quitar decimales)
+      let acNorm=ac;
+      try{acNorm=String(parseInt(parseFloat(ac)));}catch(e){}
+      if(!acNorm||acNorm==='NaN')continue;
+      // Importe: puede venir con punto de miles y coma decimal (ARS) o al revés
+      let imp=0;
+      if(importeRaw!==undefined&&importeRaw!==null&&importeRaw!==''){
+        const impStr=String(importeRaw).trim();
+        // Try direct parse first
+        imp=parseFloat(impStr);
+        if(isNaN(imp)){
+          // Try replacing . as thousands sep and , as decimal
+          imp=parseFloat(impStr.replace(/\./g,'').replace(',','.'));
+        }
+        if(isNaN(imp)) imp=0;
+      }
+      // Fecha: número Excel, ISO string "2025-02-26T...", o "DD/MM/YYYY"
       let fecha='';
-      if(typeof fechaRaw==='number'){const d=XLSX.SSF.parse_date_code(fechaRaw);fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');}
-      else{fecha=String(fechaRaw||'').trim().substring(0,10);}
-      const key=ac+'|'+doc;
+      if(typeof fechaRaw==='number'){
+        try{const d=XLSX.SSF.parse_date_code(fechaRaw);fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');}
+        catch(e){fecha='';}
+      } else if(fechaRaw){
+        const fs=String(fechaRaw).trim();
+        if(fs.includes('T')) fecha=fs.substring(0,10); // ISO: 2025-02-26T00:00:00
+        else if(fs.match(/^\d{4}-\d{2}-\d{2}/)) fecha=fs.substring(0,10); // YYYY-MM-DD
+        else if(fs.match(/^\d{2}\/\d{2}\/\d{4}/)){
+          const p=fs.split('/');fecha=p[2]+'-'+p[1]+'-'+p[0]; // DD/MM/YYYY
+        } else fecha=fs.substring(0,10);
+      }
+      const key=acNorm+'|'+doc;
       if(seen.has(key))continue;
       seen.add(key);
-      parsed.push({ac,cl,doc,fecha,imp:Math.abs(imp),signo:imp<=0?-1:1,txt});
+      parsed.push({ac:acNorm,cl,doc,fecha,imp:Math.abs(imp),signo:imp<=0?-1:1,txt});
     }
     if(!parsed.length){setStatus('st-sap',false,'No se encontraron documentos. Verificá el formato.');e.target.value='';return;}
 
