@@ -452,42 +452,53 @@ function renderAgenda(){
   document.getElementById('badge-rep').textContent=state.approved.length;
 
   let html='';
-  if(!state.sap.length){
-    html=`<div class="empty"><i class="ti ti-upload" style="font-size:28px;display:block;margin-bottom:8px"></i>Importá el reporte SAP en la pestaña <strong>Importar</strong></div>`;
-  } else {
-    if(pend.length){
-      html+=`<div class="grp"><div class="grp-hdr">
-        <span>Para revisar · ${pend.length}</span>
-        <div class="btn-row">
-          <button class="grp-btn purple-btn" onclick="openSendToProx()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>
-          <button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>
-        </div></div>`;
-      pend.forEach(inv=>{html+=rowHTML(inv,false,false);});
-      html+='</div>';
+  try{
+    if(!state.sap.length){
+      html='<div class="empty"><i class="ti ti-upload" style="font-size:28px;display:block;margin-bottom:8px"></i>Importá el reporte SAP en la pestaña <strong>Importar</strong></div>';
+    } else if(!invs.length){
+      html='<div class="empty"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay documentos para este jueves</div>';
+    } else {
+      if(pend.length){
+        html+='<div class="grp"><div class="grp-hdr"><span>Para revisar · '+pend.length+'</span>'
+          +'<div class="btn-row">'
+          +'<button class="grp-btn purple-btn" onclick="openSendToProx()"><i class="ti ti-arrow-right"></i> Pasar a próxima</button>'
+          +'<button class="grp-btn" onclick="approveAll()"><i class="ti ti-checks"></i> Aprobar todas</button>'
+          +'</div></div>';
+        pend.forEach(inv=>{try{html+=rowHTML(inv,false,false);}catch(e){html+='<div class="inv-row"><div></div><div class="inv-sub" style="color:var(--red)">Error mostrando doc '+String(inv&&inv.doc||'?')+'</div></div>';}});
+        html+='</div>';
+      }
+      if(appr.length){
+        html+='<div class="grp"><div class="grp-hdr"><span>Aprobadas · '+fm(neto)+'</span>'
+          +'<button class="grp-btn red-btn" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar todas</button></div>';
+        appr.forEach(inv=>{try{html+=rowHTML(inv,true,false);}catch(e){html+='<div class="inv-row done"><div></div><div class="inv-sub" style="color:var(--red)">Error mostrando doc '+String(inv&&inv.doc||'?')+'</div></div>';}});
+        html+='</div>';
+      }
     }
-    if(appr.length){
-      html+=`<div class="grp"><div class="grp-hdr">
-        <span>Aprobadas · ${fm(neto)}</span>
-        <button class="grp-btn red-btn" onclick="unapproveAll()"><i class="ti ti-x"></i> Desaprobar todas</button></div>`;
-      appr.forEach(inv=>{html+=rowHTML(inv,true,false);});
-      html+='</div>';
-    }
-    if(!invs.length)html=`<div class="empty"><i class="ti ti-calendar-off" style="font-size:28px;display:block;margin-bottom:8px"></i>No hay documentos para este jueves</div>`;
+  }catch(e){
+    html='<div class="empty" style="color:var(--red)"><i class="ti ti-alert-circle" style="font-size:28px;display:block;margin-bottom:8px"></i>Error al mostrar la agenda: '+e.message+'<br><small>Intentá borrar y reimportar los datos SAP</small></div>';
   }
   document.getElementById('agenda-body').innerHTML=html;
 }
 
 function rowHTML(inv,done,isProxima){
-  const isCredit=inv.signo>0;
-  return `<div class="inv-row${done?' done':''}${isCredit?' credit':''}${isProxima?' prox-row':''}">
-    <input type="checkbox" class="inv-check" ${done?'checked':''} onchange="toggleApp('${inv.doc}',this.checked)">
-    <div style="min-width:0">
-      <div class="inv-name">${getName(inv.ac)}${isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':''}</div>
-      <div class="inv-sub">N° ${inv.ac} · ${inv.doc} · ${inv.fecha} · ${inv.txt}</div>
-    </div>
-    <div class="inv-amt" style="${isCredit?'color:var(--green)':''}">${isCredit?'-':''}${fm(inv.imp)}</div>
-    <span class="bdg ${inv.cl.toLowerCase()}">${inv.cl}</span>
-  </div>`;
+  if(!inv) return '';
+  const isCredit=(inv.signo||0)>0;
+  const doc=String(inv.doc||'');
+  const ac=String(inv.ac||'');
+  const cl=String(inv.cl||'');
+  const fecha=String(inv.fecha||'');
+  const txt=String(inv.txt||'');
+  const imp=isFinite(inv.imp)?inv.imp:0;
+  const clCss=cl.toLowerCase().replace(/[^a-z0-9]/g,'');
+  return '<div class="inv-row'+(done?' done':'')+(isCredit?' credit':'')+(isProxima?' prox-row':'')+'">'
+    +'<input type="checkbox" class="inv-check" '+(done?'checked ':'')+' onchange="toggleApp(''+doc+'',this.checked)">'
+    +'<div style="min-width:0">'
+      +'<div class="inv-name">'+getName(ac)+(isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':'')+'</div>'
+      +'<div class="inv-sub">N° '+ac+' · '+doc+' · '+fecha+' · '+txt+'</div>'
+    +'</div>'
+    +'<div class="inv-amt" style="'+(isCredit?'color:var(--green)':'')+'">'+(isCredit?'-':'')+fm(imp)+'</div>'
+    +'<span class="bdg '+clCss+'">'+cl+'</span>'
+  +'</div>';
 }
 
 function toggleApp(doc,checked){
@@ -764,10 +775,16 @@ function setStatus(id,ok,msg){
 function parseExcelRows(file,cb){
   const reader=new FileReader();
   reader.onload=ev=>{
-    try{const wb=XLSX.read(ev.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];cb(null,XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));}
-    catch(e){cb(e,null);}
+    try{
+      // Try array buffer first (best compatibility for .xlsx, .xls, SpreadsheetML XML)
+      const data=new Uint8Array(ev.target.result);
+      const wb=XLSX.read(data,{type:'array',cellDates:true,raw:false});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      cb(null,rows);
+    }catch(e){cb(e,null);}
   };
-  reader.readAsBinaryString(file);
+  reader.readAsArrayBuffer(file);
 }
 
 function importMaestro(e){
@@ -866,27 +883,39 @@ function importSAP(e){
       // Importe: puede venir con punto de miles y coma decimal (ARS) o al revés
       let imp=0;
       if(importeRaw!==undefined&&importeRaw!==null&&importeRaw!==''){
-        const impStr=String(importeRaw).trim();
-        // Try direct parse first
-        imp=parseFloat(impStr);
-        if(isNaN(imp)){
-          // Try replacing . as thousands sep and , as decimal
-          imp=parseFloat(impStr.replace(/\./g,'').replace(',','.'));
+        if(typeof importeRaw==='number'){
+          imp=importeRaw;
+        } else {
+          let impStr=String(importeRaw).trim().replace(/[$\s]/g,'');
+          // Try as-is first (e.g. "-34480")
+          imp=parseFloat(impStr);
+          if(isNaN(imp)){
+            // Argentine format: . = thousands, , = decimal (e.g. "34.480,00")
+            imp=parseFloat(impStr.replace(/\./g,'').replace(',','.'));
+          }
+          if(isNaN(imp)){
+            // Remove all non-numeric except minus and decimal
+            imp=parseFloat(impStr.replace(/[^0-9.\-]/g,''));
+          }
+          if(isNaN(imp)) imp=0;
         }
-        if(isNaN(imp)) imp=0;
       }
-      // Fecha: número Excel, ISO string "2025-02-26T...", o "DD/MM/YYYY"
+      // Fecha: Date object (cellDates:true), número Excel, ISO string, DD/MM/YYYY, etc.
       let fecha='';
-      if(typeof fechaRaw==='number'){
+      if(fechaRaw instanceof Date){
+        // SheetJS with cellDates:true returns Date objects
+        const d=fechaRaw;
+        fecha=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      } else if(typeof fechaRaw==='number'){
         try{const d=XLSX.SSF.parse_date_code(fechaRaw);fecha=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');}
         catch(e){fecha='';}
       } else if(fechaRaw){
         const fs=String(fechaRaw).trim();
-        if(fs.includes('T')) fecha=fs.substring(0,10); // ISO: 2025-02-26T00:00:00
-        else if(fs.match(/^\d{4}-\d{2}-\d{2}/)) fecha=fs.substring(0,10); // YYYY-MM-DD
-        else if(fs.match(/^\d{2}\/\d{2}\/\d{4}/)){
-          const p=fs.split('/');fecha=p[2]+'-'+p[1]+'-'+p[0]; // DD/MM/YYYY
-        } else fecha=fs.substring(0,10);
+        if(fs.includes('T')) fecha=fs.substring(0,10);
+        else if(fs.match(/^\d{4}-\d{2}-\d{2}/)) fecha=fs.substring(0,10);
+        else if(fs.match(/^\d{2}\/\d{2}\/\d{4}/)){const p=fs.split('/');fecha=p[2]+'-'+p[1]+'-'+p[0];}
+        else if(fs.match(/^\d{2}-\d{2}-\d{4}/)){const p=fs.split('-');fecha=p[2]+'-'+p[1]+'-'+p[0];}
+        else fecha=fs.substring(0,10);
       }
       const key=acNorm+'|'+doc;
       if(seen.has(key))continue;
