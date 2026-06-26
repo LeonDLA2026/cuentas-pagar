@@ -483,22 +483,25 @@ function renderAgenda(){
 function rowHTML(inv,done,isProxima){
   if(!inv) return '';
   const isCredit=(inv.signo||0)>0;
-  const doc=String(inv.doc||'');
+  const doc=String(inv.doc||'').replace(/`/g,'');
   const ac=String(inv.ac||'');
   const cl=String(inv.cl||'');
-  const fecha=String(inv.fecha||'');
-  const txt=String(inv.txt||'');
+  const txt=String(inv.txt||'').replace(/`/g,'').replace(/</g,'&lt;');
   const imp=isFinite(inv.imp)?inv.imp:0;
   const clCss=cl.toLowerCase().replace(/[^a-z0-9]/g,'');
-  return '<div class="inv-row'+(done?' done':'')+(isCredit?' credit':'')+(isProxima?' prox-row':'')+'">'
-    +'<input type="checkbox" class="inv-check" '+(done?'checked ':'')+' onchange="toggleApp(''+doc+'',this.checked)">'
-    +'<div style="min-width:0">'
-      +'<div class="inv-name">'+getName(ac)+(isCredit?' <span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':'')+'</div>'
-      +'<div class="inv-sub">N° '+ac+' · '+doc+' · '+fecha+' · '+txt+'</div>'
-    +'</div>'
-    +'<div class="inv-amt" style="'+(isCredit?'color:var(--green)':'')+'">'+(isCredit?'-':'')+fm(imp)+'</div>'
-    +'<span class="bdg '+clCss+'">'+cl+'</span>'
-  +'</div>';
+  const rowCls=['inv-row',done?'done':'',isCredit?'credit':'',isProxima?'prox-row':''].filter(Boolean).join(' ');
+  const chk=done?'checked':'';
+  const amtStyle=isCredit?'color:var(--green)':'';
+  const nc=isCredit?'<span style="font-size:10px;color:var(--green);font-weight:700">NC</span>':'';
+  return `<div class="${rowCls}">
+    <input type="checkbox" class="inv-check" ${chk} data-doc="${doc}" onchange="toggleApp(this.dataset.doc,this.checked)">
+    <div style="min-width:0">
+      <div class="inv-name">${getName(ac)}${nc}</div>
+      <div class="inv-sub">N° ${ac} · ${doc} · ${String(inv.fecha||'')} · ${txt}</div>
+    </div>
+    <div class="inv-amt" style="${amtStyle}">${isCredit?'-':''}${fm(imp)}</div>
+    <span class="bdg ${clCss}">${cl}</span>
+  </div>`;
 }
 
 function toggleApp(doc,checked){
