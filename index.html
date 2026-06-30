@@ -141,11 +141,36 @@ input[type=text]:focus{outline:none;border-color:var(--blue)}
 .prov-invoices .inv-row{border-radius:0;border-left:none;border-right:none;border-top:none;border-bottom:0.5px solid var(--border);margin-bottom:0}
 .prov-invoices .inv-row:last-child{border-bottom:none}
 .rep-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:40px 36px;width:360px;max-width:95vw;text-align:center}
+.login-logo{font-size:32px;margin-bottom:16px}
+.login-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:28px}
+.login-input{width:100%;padding:10px 14px;font-size:15px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);color:var(--text);text-align:center;letter-spacing:2px;margin-bottom:12px;font-family:inherit}
+.login-input:focus{outline:none;border-color:var(--blue)}
+.login-btn{width:100%;padding:11px;font-size:14px;font-weight:600;background:var(--text);color:var(--bg);border:none;border-radius:var(--r);cursor:pointer;font-family:inherit}
+.login-btn:hover{opacity:.85}
+.login-error{font-size:13px;color:var(--red);margin-top:10px;min-height:20px}
+.sync-toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--bg);padding:9px 16px;border-radius:var(--rl);font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;display:flex;align-items:center;gap:8px}
+.sync-toast.show{opacity:1}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.inv-row{grid-template-columns:18px 1fr auto}.inv-row .bdg{display:none}}
 </style>
 </head>
 <body>
-<div class="app">
+<!-- Login screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🗞️</div>
+    <h1 class="login-title">Cuentas a pagar</h1>
+    <p class="login-sub">Los Andes · Ingresá la clave para continuar</p>
+    <input class="login-input" type="password" id="login-pwd" placeholder="••••••••••••"
+      onkeydown="if(event.key==='Enter')checkLogin()">
+    <button class="login-btn" onclick="checkLogin()">Ingresar</button>
+    <p class="login-error" id="login-error"></p>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
 
 <div class="topbar">
   <div>
@@ -328,6 +353,112 @@ function setSyncUI(s){
   else if(s==='saving'){dot.className='sync-dot saving';lbl.textContent='Guardando...';}
   else{dot.className='sync-dot err';lbl.textContent='Solo local';}
 }
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+const PWD_HASH = '9ebb2d6e6f76f8594846700d6ba1dc3af5e678f73610f820fc1d1706928034fd';
+
+async function hashPwd(pwd){
+  const enc = new TextEncoder().encode(pwd);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkLogin(){
+  const pwd = document.getElementById('login-pwd').value;
+  const errEl = document.getElementById('login-error');
+  if(!pwd){ errEl.textContent='Ingresá la clave.'; return; }
+  const h = await hashPwd(pwd);
+  if(h === PWD_HASH){
+    sessionStorage.setItem('cap_auth','1');
+    showApp();
+  } else {
+    errEl.textContent='Clave incorrecta. Intentá de nuevo.';
+    document.getElementById('login-pwd').value='';
+    document.getElementById('login-pwd').focus();
+  }
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  loadCloud().then(()=>{
+    lastKnownUpdate=state.lastUpdate||null;
+    startPolling();
+  });
+}
+
+// ─── POLLING / SYNC EN TIEMPO REAL ───────────────────────────────────────────
+let pollTimer = null;
+let lastKnownUpdate = null;
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  // Poll every 20 seconds when tab is visible, every 60s when hidden
+  pollTimer = setInterval(()=>{
+    if(!document.hidden) pollForUpdates();
+  }, 20000);
+  // Also poll when tab becomes visible again
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden) pollForUpdates();
+  });
+}
+
+async function pollForUpdates(){
+  if(saveTimer) return; // local changes pending, skip poll
+  try{
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{
+      headers:{'X-Master-Key':BIN_KEY}
+    });
+    if(!r.ok) return;
+    const d = await r.json();
+    const remoteTs = d.record?.lastUpdate;
+    if(!remoteTs) return;
+    if(lastKnownUpdate === null){
+      // First poll — just record timestamp, data already loaded on login
+      lastKnownUpdate = remoteTs;
+      return;
+    }
+    if(remoteTs !== lastKnownUpdate){
+      // Someone else made changes — update local state
+      lastKnownUpdate = remoteTs;
+      mergeState(d.record);
+      refreshCurrentTab();
+      setSyncUI('ok');
+      showToast('Datos actualizados desde otro dispositivo');
+    }
+  }catch(e){}
+}
+
+function refreshCurrentTab(){
+  const tabs=['agenda','proxima','nodef','sap','datos','reporte'];
+  const activeIdx=[...document.querySelectorAll('.tab')].findIndex(t=>t.classList.contains('active'));
+  const tab=tabs[activeIdx]||'agenda';
+  if(tab==='agenda'){renderMonthUI();}
+  else if(tab==='proxima'){renderProxima();}
+  else if(tab==='nodef'){renderNoDef();}
+  else if(tab==='sap'){renderSAP();}
+  else if(tab==='datos'){renderDataStatus();}
+  else if(tab==='reporte'){renderReporte();}
+  updateBadges();
+}
+
+function showToast(msg){
+  const t=document.getElementById('sync-toast');
+  const m=document.getElementById('sync-toast-msg');
+  if(!t||!m) return;
+  m.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+function initAuth(){
+  if(sessionStorage.getItem('cap_auth')==='1'){
+    showApp();
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('login-pwd').focus();
+  }
+}
+
 async function loadCloud(){
   try{
     const r=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':BIN_KEY}});
@@ -1341,7 +1472,9 @@ function initUI(){
   updateBadges();
   renderDataStatus();
 }
-loadCloud();
+initAuth();
 </script>
+</div><!-- /main-app -->
+<div class="sync-toast" id="sync-toast"><i class="ti ti-refresh"></i> <span id="sync-toast-msg">Datos actualizados</span></div>
 </body>
 </html>
