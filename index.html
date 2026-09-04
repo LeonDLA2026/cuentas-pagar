@@ -447,6 +447,7 @@ tbody tr:last-child td{border-bottom:none}
   <button class="tab active" data-tab="tab-upload">📤 Cargar Facturas</button>
   <button class="tab" data-tab="tab-table">⏳ Pendientes de Revisión</button>
   <button class="tab" data-tab="tab-pagar" id="tab-btn-pagar">💳 Facturas por Pagar <span id="badge-pagar" style="display:none;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:middle;transition:opacity 1s ease"></span></button>
+  <button class="tab" data-tab="tab-circuito">🔄 En circuito de pago <span id="badge-circuito" style="display:none;background:#f97316;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:middle;transition:opacity 1s ease"></span></button>
   <button class="tab" data-tab="tab-pagadas">✅ Facturas Pagadas</button>
   <button class="tab" data-tab="tab-proveedores">🏢 Proveedores</button>
   <button class="tab" data-tab="tab-auditoria">📋 Auditoría</button>
@@ -842,8 +843,6 @@ tbody tr:last-child td{border-bottom:none}
       <input type="text" class="search-box" id="search-pagar" placeholder="Buscar proveedor, CUIT, número..."/>
 
       <button class="btn btn-sm" style="background:#f97316;color:#fff;font-weight:600"
-        id="btn-aprobar-sel" title="Aprobar los pagos seleccionados (en estado Pend. Aprobación)"
-        onclick="aprobarSeleccionadas()">✅ Aprobar seleccionadas</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleViewer()" title="Mostrar/ocultar visor">👁 Visor</button>
     </div>
     <div class="pagar-table-wrap">
@@ -871,6 +870,32 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 
   <!-- TAB FACTURAS PAGADAS -->
+  <!-- TAB: EN CIRCUITO DE PAGO -->
+  <div class="panel" id="tab-circuito" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;color:var(--muted)">
+        Órdenes de pago generadas — esperando confirmación de acreditación bancaria
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-success btn-sm" onclick="confirmarCircuito()">✅ Confirmar pago</button>
+        <button class="btn btn-ghost btn-sm" onclick="bajarCircuito()" style="color:var(--red)">↩ Bajar pago</button>
+      </div>
+    </div>
+    <div class="pagar-summary" id="circuito-summary"></div>
+    <div id="aviso-circuito"></div>
+    <div style="overflow-x:auto">
+    <table class="inv-table">
+      <thead><tr>
+        <th><input type="checkbox" id="cb-circuito-all" onchange="toggleAllCircuito(this)"/></th>
+        <th>ID</th><th>Tipo</th><th>Nro. Factura</th><th>CUIT</th>
+        <th>Proveedor</th><th>F. Emisión</th><th style="text-align:right">Total</th>
+        <th>Tipo pago</th><th>CBU</th><th>Envío</th><th>Acciones</th>
+      </tr></thead>
+      <tbody id="tbl-circuito-body"></tbody>
+    </table>
+    </div>
+  </div>
+
   <div class="panel" id="tab-pagadas">
     <div class="pagar-summary" id="pagadas-summary"></div>
     <div class="toolbar">
@@ -3983,22 +4008,9 @@ function renderPagar() {
     </div>` : ''}
     ${_periodoHtml}
   `;
-  // Aviso para aprobador — reusar el mismo div, no acumular
-  let avisoEl = document.getElementById('aviso-aprobador');
-  if (pendAprobacion.length > 0 && puedo('aprobar_pago')) {
-    if (!avisoEl) {
-      avisoEl = document.createElement('div');
-      avisoEl.id = 'aviso-aprobador';
-      avisoEl.style.cssText = 'background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.35);border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px';
-      const summaryEl = document.getElementById('pagar-summary');
-      if (summaryEl) summaryEl.insertAdjacentElement('afterend', avisoEl);
-    }
-    avisoEl.innerHTML = '<span style="font-size:16px">⏳</span><div><strong style="color:#f97316">' + pendAprobacion.length + ' factura(s) esperando aprobación</strong>' +
-      '<div style="font-size:12px;color:var(--muted);margin-top:2px">Seleccionalas y usá ✅ Aprobar seleccionadas.</div></div>';
-    avisoEl.style.display = 'flex';
-  } else if (avisoEl) {
-    avisoEl.style.display = 'none';
-  }
+  // Banner de aprobación eliminado — la aprobación es via "Aprobar seleccionadas"
+  const avisoEl = document.getElementById('aviso-aprobador');
+  if (avisoEl) avisoEl.style.display = 'none';
 
 
   const sorted = _sortItems(items, _pagarSort.col, _pagarSort.desc);
@@ -4040,18 +4052,14 @@ function renderPagar() {
       <td class="mono" style="font-size:11px">${inv.cae||'—'}</td>
       <td style="white-space:nowrap">${fmtDate(inv.vto_cae)}</td>
       <td>
+      <td onclick="event.stopPropagation()">
         <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${inv.estado_rev === 'PEND. APROBACIÓN'
-            ? `<button class="btn btn-sm" style="background:#f97316;color:#fff;font-weight:700"
-                onclick="event.stopPropagation();aprobarPago(${inv.id})"
-                title="Aprobar y procesar el pago configurado">✅ Aprobar</button>
-               <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();rechazarPago(${inv.id})"
-                title="Rechazar — vuelve a Revisada" style="color:var(--red)">✗</button>`
-            : ''
-          }
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirModalConfig(${inv.id})"
-            title="Configurar pago" style="color:var(--accent)">⚙</button>
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();devolverRevision(${inv.id})"
+          <button class="btn btn-ghost btn-sm"
+            onclick="abrirModalConfig(${inv.id})"
+            title="Configurar pago"
+            style="color:var(--accent);font-size:16px">⚙</button>
+          <button class="btn btn-ghost btn-sm"
+            onclick="devolverRevision(${inv.id})"
             title="Devolver a Revisión">↩</button>
         </div>
       </td>
@@ -4529,14 +4537,17 @@ async function exportarOrdenPago(ids) {
 
   const rows = facturas.map(i => {
     const dp    = getDatosProv(i.cuit);
-    const saldo = saldoPendiente(i);
-    const pagado = montoPagado(i);
+    const cfg   = getConfigPago(i.id);
+    // Monto: usar cfg.transf_monto si existe, sino saldo pendiente, sino total
+    const monto = cfg?.transf_monto || saldoPendiente(i) || totalEfectivo(i) || 0;
+    // CBU: del proveedor en Sheets, o del campo cbu de la factura
+    const cbu   = dp.cbu || i.cbu || '';
     return [
       i.id, i.tipo||'', i.numero_factura||'', i.cuit||'',
       i.proveedor||'', i.condicion_iva||'',
       i.fecha_emision ? new Date(i.fecha_emision) : '',
-      saldo||'',                           // TOTAL A PAGAR = saldo pendiente
-      dp.cbu||'',
+      monto,
+      cbu,
       dp.mail||'',
       dp.telefono||'',
     ];
@@ -4579,7 +4590,7 @@ async function exportarOrdenPago(ids) {
   facturas.forEach(i => {
     const k = (i.cuit||'') + '|' + (i.proveedor||'');
     if (!byProv[k]) byProv[k] = {proveedor:i.proveedor||'',cuit:i.cuit||'',
-      condiva:i.condicion_iva||'',facturas:[],total:0};
+      condiva:i.condicion_iva||'',cbu:getDatosProv(i.cuit).cbu||i.cbu||'',facturas:[],total:0};
     byProv[k].facturas.push(i.numero_factura||'');
     byProv[k].total += (totalEfectivo(i)||0);
   });
@@ -6692,9 +6703,18 @@ let _mcpTransfSub = null;  // 'total' | 'parcial'
 let _mcpCanjeSub  = null;
 
 function abrirModalConfig(id) {
+  console.log('[Config] Abriendo para ID:', id);
+  try {
+  console.log('[Config] 1. Verificando permisos...');
   if (!puedo('configurar_pago')) { toast('Sin permiso para configurar pagos','error'); return; }
+  console.log('[Config] 2. Buscando factura...');
   const inv = DB.invoices.find(i => i.id === id);
-  if (!inv) return;
+  if (!inv) { toast('Factura no encontrada','error'); return; }
+  console.log('[Config] 3. Estado:', inv.estado_rev);
+  if (['PAGADA','CANJEADO','PAGO PARCIAL','CANJE PARCIAL','EN CIRCUITO DE PAGO'].includes(inv.estado_rev)) {
+    toast('Esta factura ya fue procesada y no se puede reconfigurar','warn'); return;
+  }
+  console.log('[Config] 4. Seteando _mcpFacturaId...');
   _mcpFacturaId = id;
 
   const total   = Math.abs(totalEfectivo(inv)||0);
@@ -6738,26 +6758,16 @@ function abrirModalConfig(id) {
     if (cfg.canje_monto)    document.getElementById('mcp-canje-monto').value  = cfg.canje_monto;
     actualizarMcpResumen();
   } else {
-    // Por defecto: 100% transferencia total — guardar automáticamente
+    // Por defecto: transferencia total — solo UI, no guardar hasta que el operador confirme
     setMcpTipo('transferencia');
     setMcpSubtipo('transf', 'total');
-    // Auto-guardar la config por defecto para que aparezca en la tabla sin abrir el modal
-    const _inv = DB.invoices.find(i => i.id === id);
-    const _total = totalEfectivo(_inv) || 0;
-    setConfigPago(id, {
-      tipo: 'transferencia',
-      transf_subtipo: 'total',
-      transf_monto: _total,
-      canje_subtipo: null,
-      canje_monto: null,
-      obs: '',
-      fecha_venc_cheque: '',
-      fecha_config: new Date().toISOString(),
-    });
-    // No cambiar estado automáticamente — el operador decide cuándo enviar a aprobación
   }
 
   document.getElementById('modal-config-pago').style.display = 'flex';
+  } catch(e) {
+    console.error('[Config] ERROR COMPLETO:', e.message, e.stack);
+    alert('Error en modal de configuración: ' + e.message);
+  }
 }
 
 function cerrarModalConfig() {
@@ -7041,6 +7051,7 @@ async function abrirPreviewOrdenPagoConfigurado(ids) {
   frame.srcdoc  = _pdfHtmlCache || _canjeHtmlCache || '<p style="padding:2rem;color:#666">Sin documento</p>';
 
   document.getElementById('modal-orden-pago').style.display = 'flex';
+  window._ordenDescargada = false; // resetear flag de descarga
   // Mostrar botón de aprobar si hay una aprobación pendiente
   const _btnApr = document.getElementById('mop-btn-aprobar');
   if (_btnApr) _btnApr.style.display = (window._pendingAprobarId || window._pendingAprobarIds?.length) ? '' : 'none';
@@ -7089,6 +7100,7 @@ async function _buildPdfHtmlConfig(ids, modo) {
   const filas = factsConModo.map((inv, i) => {
     const dp    = getDatosProv(inv.cuit);
     const cfg   = getConfigPago(inv.id);
+    const cbu   = dp.cbu || inv.cbu || '';
     const monto = cfg?.tipo === 'mixto' ? (cfg.transf_monto||0) : (cfg?.transf_monto || saldoPendiente(inv));
     const total = Math.abs(totalEfectivo(inv)||0);
     const mixto = cfg?.tipo === 'mixto';
@@ -7101,7 +7113,7 @@ async function _buildPdfHtmlConfig(ids, modo) {
       '<td>' + (inv.fecha_emision ? fmtDate(inv.fecha_emision) : '—') + '</td>' +
       (mixto ? '<td class="num" style="color:#84cc16">' + fmtAR(cfg.canje_monto||0) + '</td>' : '') +
       '<td class="num" style="font-weight:800;color:#0a2030">' + fmtAR(monto) + '</td>' +
-      '<td class="mono small">' + (dp.cbu||'—') + '</td>' +
+      '<td class="mono small">' + (cbu||'—') + '</td>' +
     '</tr>';
   }).join('');
 
@@ -7355,12 +7367,26 @@ async function _confirmarAprobarPago(id) {
     'Factura #' + id + ' aprobada por ' + aprobador + ' — ' + (inv.proveedor||inv.cuit),
     { facturaId:id, proveedor:inv.proveedor||'', importe:saldo });
 
+  // Pasar a EN CIRCUITO (no directamente a PAGADA)
+  inv.estado_rev = 'EN CIRCUITO DE PAGO';
+  inv.fecha_circuito = new Date().toISOString();
+  borrarConfigPago(id);
+  inv.historial = inv.historial||[];
+  inv.historial.push({ campo:'estado_rev', label:'Enviado al circuito de pago',
+    nuevo:'EN CIRCUITO DE PAGO — Aprobado por: '+aprobador,
+    fecha:new Date().toLocaleString('es-AR') });
+
   await saveInvoiceToSheets(inv);
   updateLocalCache();
-  renderPagar(); renderPagadas(); renderTable(); updateStats();
+  renderPagar(); renderCircuito(); renderPagadas(); renderTable(); updateStats();
   closeModalOrdenPago();
-  toast('✅ Pago aprobado por ' + aprobador + ' — Factura #' + id + ' → ' + inv.estado_rev, 'success', 5000);
+  toast('🔄 Factura #' + id + ' en circuito de pago', 'success', 4000);
   window._pendingAprobarId = null;
+  // Ir al tab circuito
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content,.panel').forEach(p => p.style.display='none');
+  const _tabC = document.querySelector('[data-tab="tab-circuito"]');
+  if (_tabC) { _tabC.classList.add('active'); document.getElementById('tab-circuito').style.display='block'; renderCircuito(); }
 }
 
 async function rechazarPago(id) {
@@ -7395,13 +7421,21 @@ async function aprobarSeleccionadas() {
     .map(cb => parseInt(cb.dataset.id))
     .filter(id => {
       const inv = DB.invoices.find(i=>i.id===id);
-      return inv?.estado_rev === 'PEND. APROBACIÓN';
+      return inv && ['PEND. APROBACIÓN','REVISADA'].includes(inv.estado_rev);
     });
 
   if (!ids.length) {
-    toast('Seleccioná facturas en estado "Pend. Aprobación"', 'warn'); return;
+    toast('Seleccioná facturas configuradas para pagar', 'warn'); return;
   }
 
+  // Mostrar preview de orden de pago ANTES de aprobar
+  window._pendingAprobarIds = ids;
+  window._pendingAprobarId  = null;
+  await abrirPreviewOrdenPagoConfigurado(ids);
+  return; // continúa en _ejecutarAprobacion() desde el modal
+}
+
+async function _ejecutarAprobacion(ids) {
   const _sesSel = getSesion();
   const aprobador = _sesSel?.nombre || _sesSel?.usuario || 'Sin especificar';
 
@@ -7438,13 +7472,13 @@ async function aprobarSeleccionadas() {
         monto:saldo, tipo:'pago', observacion:'Aprobado por: '+aprobador });
     }
 
-    inv.pagos = pagos;
-    setPagosLS(id, pagos);
-    recalcularEstado(inv);
+    // Pasar a EN CIRCUITO DE PAGO (no directamente a PAGADA)
+    inv.estado_rev = 'EN CIRCUITO DE PAGO';
+    inv.fecha_circuito = new Date().toISOString();
     borrarConfigPago(id);
     inv.historial = inv.historial||[];
-    inv.historial.push({ campo:'estado_rev', label:'Pago aprobado',
-      nuevo:inv.estado_rev+' — Aprobado por: '+aprobador,
+    inv.historial.push({ campo:'estado_rev', label:'Enviado al circuito de pago',
+      nuevo:'EN CIRCUITO DE PAGO — Aprobado por: '+aprobador,
       fecha:new Date().toLocaleString('es-AR') });
     procesadas++;
   }
@@ -7455,8 +7489,14 @@ async function aprobarSeleccionadas() {
   }));
 
   updateLocalCache();
-  renderPagar(); renderPagadas(); renderTable(); updateStats();
-  toast('✅ ' + procesadas + ' pago(s) aprobados por ' + aprobador, 'success', 5000);
+  renderPagar(); renderCircuito(); renderPagadas(); renderTable(); updateStats();
+  closeModalOrdenPago();
+  toast('🔄 ' + procesadas + ' factura(s) en circuito de pago — esperando confirmación', 'success', 5000);
+  // Cambiar al tab de circuito
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content,.panel').forEach(p => p.style.display='none');
+  const tabCircuito = document.querySelector('[data-tab="tab-circuito"]');
+  if (tabCircuito) { tabCircuito.classList.add('active'); document.getElementById('tab-circuito').style.display='block'; renderCircuito(); }
 }
 
 
@@ -7883,7 +7923,7 @@ function _aplicarBotonesPermisos() {
   // Botones que requieren permisos específicos
   const btnConfig = [
     { id:'btn-pagar-all',       perm:'generar_orden'    },
-    { id:'btn-aprobar-sel',     perm:'aprobar_pago'     },
+    { id:'tab-btn-circuito',    perm:'aprobar_pago'     },
     { id:'btn-refresh',         perm:null               }, // siempre visible
   ];
 
@@ -8119,8 +8159,7 @@ async function iniciarApp() {
   // Normalizar períodos mal guardados (ISO → YYYY-MM)
   if (SCRIPT_URL) apiCall('normalizarPeriodos', {}).catch(()=>{});
 
-  // Aplicar config de pago por defecto a facturas REVISADAS sin config
-  _aplicarConfigDefecto();
+  // Config por defecto se aplica al abrir el modal ⚙
 
   await Promise.allSettled([
     loadProveedoresFromSheets(),
@@ -8374,25 +8413,25 @@ function _aplicarConfigDefecto() {
       fecha_venc_cheque: '',
       fecha_config:   new Date().toISOString(),
     });
-    // Pasar a PEND. APROBACIÓN automáticamente
-    inv.estado_rev = 'PEND. APROBACIÓN';
+    // NO cambiar el estado — el operador puede seguir configurando
   });
-
-  // Guardar en Sheets en batch
-  if (SCRIPT_URL && revisadas.length) {
-    apiCall('saveMany', { invoices: revisadas.map(toSheetsRow) }).catch(()=>{});
-  }
-  updateLocalCache();
   console.log('[Config defecto] Aplicada a', revisadas.length, 'factura(s)');
 }
 
 
 // ── Confirmar aprobación desde el modal de preview ───────────────────────────
 async function _confirmarDesdeModal() {
+  // Descargar PDF automáticamente si no se descargó
+  if (_pdfHtmlCache && !window._ordenDescargada) {
+    descargarSoloPDF();
+    window._ordenDescargada = true;
+    await new Promise(r => setTimeout(r, 800)); // pausa para que inicie la descarga
+  }
+
   if (window._pendingAprobarId) {
     await _confirmarAprobarPago(window._pendingAprobarId);
   } else if (window._pendingAprobarIds?.length) {
-    await _procesarAprobacionMultiple(window._pendingAprobarIds);
+    await _ejecutarAprobacion(window._pendingAprobarIds);
   }
 }
 
@@ -8404,6 +8443,181 @@ function closeModalOrdenPago() {
   // Ocultar botón de aprobar
   const btnApr = document.getElementById('mop-btn-aprobar');
   if (btnApr) btnApr.style.display = 'none';
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB: EN CIRCUITO DE PAGO
+// ═══════════════════════════════════════════════════════════════════
+function renderCircuito() {
+  const items = DB.invoices.filter(i => i.estado_rev === 'EN CIRCUITO DE PAGO');
+  const total = items.reduce((a, i) => a + (totalEfectivo(i)||0), 0);
+
+  // Summary
+  document.getElementById('circuito-summary').innerHTML =
+    `<div class="pagar-stat">
+      <div class="pagar-stat-lbl">En circuito</div>
+      <div class="pagar-stat-val">${items.length}</div>
+      <div class="pagar-stat-sub">${fmtMoneyShort(total)}</div>
+    </div>`;
+
+  // Badge en el tab
+  const badge = document.getElementById('badge-circuito');
+  if (badge) {
+    if (items.length > 0) {
+      badge.textContent = items.length;
+      badge.style.display = 'inline';
+      badge.style.opacity = '1';
+      if (window._badgeCircuitoTimer) clearTimeout(window._badgeCircuitoTimer);
+      window._badgeCircuitoTimer = setTimeout(() => {
+        badge.style.opacity = '0';
+        setTimeout(() => badge.style.display = 'none', 1000);
+      }, 4000);
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // Tabla
+  const tbody = document.getElementById('tbl-circuito-body');
+  if (!tbody) return;
+
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--muted)">
+      No hay facturas en circuito de pago</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map((inv, idx) => {
+    const cfg = getConfigPago(inv.id);
+    const dp  = getDatosProv(inv.cuit);
+    const cbu = dp.cbu || inv.cbu || '—';
+    const envio = inv.fecha_circuito ? fmtDate(inv.fecha_circuito) : '—';
+    return `<tr class="${idx%2===0?'even':'odd'}">
+      <td><input type="checkbox" class="cb-circuito" data-id="${inv.id}"/></td>
+      <td>${inv.id}</td>
+      <td style="font-size:11px">${inv.tipo||'—'}</td>
+      <td class="mono" style="font-size:11px">${inv.numero_factura||'—'}</td>
+      <td class="mono" style="font-size:11px">${inv.cuit||'—'}</td>
+      <td><strong>${inv.proveedor||'—'}</strong>
+        ${inv.concepto?`<div style="font-size:11px;color:var(--muted)">${inv.concepto.slice(0,40)}…</div>`:''}
+      </td>
+      <td style="white-space:nowrap">${fmtDate(inv.fecha_emision)||'—'}</td>
+      <td class="td-num" style="font-weight:700">${fmtMoney(totalEfectivo(inv))}</td>
+      <td style="font-size:11px">${cfg ? resumenConfig(cfg) : '💳 Transferencia'}</td>
+      <td class="mono" style="font-size:10px">${cbu}</td>
+      <td style="white-space:nowrap;font-size:11px">${envio}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-success btn-sm" style="font-size:11px"
+            onclick="confirmarCircuitoUna(${inv.id})" title="Confirmar acreditación">✅</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red)"
+            onclick="bajarCircuitoUna(${inv.id})" title="Bajar — vuelve a Pend. aprobación">↩</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleAllCircuito(cb) {
+  document.querySelectorAll('.cb-circuito').forEach(c => c.checked = cb.checked);
+}
+
+function _getCircuitoSeleccionados() {
+  return [...document.querySelectorAll('.cb-circuito:checked')].map(c => parseInt(c.dataset.id));
+}
+
+// ── Confirmar pago (✅) — individual ─────────────────────────────────────────
+async function confirmarCircuitoUna(id) {
+  await _procesarConfirmacion([id]);
+}
+
+// ── Confirmar pago — seleccionadas ────────────────────────────────────────────
+async function confirmarCircuito() {
+  const ids = _getCircuitoSeleccionados();
+  if (!ids.length) { toast('Seleccioná al menos una factura', 'warn'); return; }
+  await _procesarConfirmacion(ids);
+}
+
+async function _procesarConfirmacion(ids) {
+  for (const id of ids) {
+    const inv = DB.invoices.find(i => i.id === id);
+    if (!inv || inv.estado_rev !== 'EN CIRCUITO DE PAGO') continue;
+
+    const cfg   = getConfigPago(id);
+    const saldo = saldoPendiente(inv);
+    const pagos = getPagos(inv);
+    const ses   = getSesion();
+    const quien = ses?.nombre || ses?.usuario || 'Sin especificar';
+
+    // Registrar el pago real
+    if (cfg) {
+      if (['transferencia','cheque','cheque_diferido'].includes(cfg.tipo)) {
+        pagos.push({ id:Date.now()+id, fecha:new Date().toISOString(),
+          monto:cfg.transf_monto||saldo, tipo:'pago',
+          observacion:'Confirmado por: '+quien });
+      } else if (cfg.tipo === 'canje') {
+        pagos.push({ id:Date.now()+id, fecha:new Date().toISOString(),
+          monto:cfg.canje_monto||saldo, tipo:'canje',
+          observacion:'Confirmado por: '+quien });
+      } else if (cfg.tipo === 'mixto') {
+        if ((cfg.transf_monto||0)>0)
+          pagos.push({ id:Date.now()+id, fecha:new Date().toISOString(),
+            monto:cfg.transf_monto, tipo:'pago', observacion:'Confirmado por: '+quien+' — Transf.' });
+        if ((cfg.canje_monto||0)>0)
+          pagos.push({ id:Date.now()+id+1, fecha:new Date().toISOString(),
+            monto:cfg.canje_monto, tipo:'canje', observacion:'Confirmado por: '+quien+' — Canje' });
+      }
+    } else {
+      pagos.push({ id:Date.now()+id, fecha:new Date().toISOString(),
+        monto:saldo, tipo:'pago', observacion:'Confirmado por: '+quien });
+    }
+
+    inv.pagos = pagos;
+    setPagosLS(id, pagos);
+    recalcularEstado(inv);
+    borrarConfigPago(id);
+    inv.historial = inv.historial||[];
+    inv.historial.push({ campo:'estado_rev', label:'Pago confirmado',
+      nuevo: inv.estado_rev, fecha: new Date().toLocaleString('es-AR') });
+  }
+
+  await Promise.all(ids.map(id => {
+    const inv = DB.invoices.find(i => i.id === id);
+    return inv ? saveInvoiceToSheets(inv) : Promise.resolve();
+  }));
+
+  updateLocalCache();
+  renderCircuito(); renderPagadas(); renderTable(); updateStats();
+  toast(`✅ ${ids.length} pago(s) confirmados`, 'success', 4000);
+}
+
+// ── Bajar pago — individual ────────────────────────────────────────────────────
+async function bajarCircuitoUna(id) {
+  await _procesarBaja([id]);
+}
+
+// ── Bajar pago — seleccionadas ─────────────────────────────────────────────────
+async function bajarCircuito() {
+  const ids = _getCircuitoSeleccionados();
+  if (!ids.length) { toast('Seleccioná al menos una factura', 'warn'); return; }
+  await _procesarBaja(ids);
+}
+
+async function _procesarBaja(ids) {
+  for (const id of ids) {
+    const inv = DB.invoices.find(i => i.id === id);
+    if (!inv) continue;
+    inv.estado_rev = 'PEND. APROBACIÓN';
+    inv.fecha_circuito = null;
+    inv.historial = inv.historial||[];
+    inv.historial.push({ campo:'estado_rev', label:'Pago bajado',
+      nuevo:'PEND. APROBACIÓN', fecha:new Date().toLocaleString('es-AR') });
+    await saveInvoiceToSheets(inv);
+  }
+  updateLocalCache();
+  renderCircuito(); renderPagar(); renderTable(); updateStats();
+  toast(`↩ ${ids.length} factura(s) devuelta(s) a Pend. aprobación`, 'warn', 4000);
 }
 
 // Sort via event delegation (único listener, sin duplicados)
