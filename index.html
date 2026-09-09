@@ -141,9 +141,9 @@ tbody tr:last-child td{border-bottom:none}
 .bdg-config .c-transf{color:var(--accent)}
 .bdg-config .c-canje{color:#84cc16}
 /* Modal configurar pago */
-#modal-config-pago{position:fixed;inset:0;z-index:860;display:none;
+#modal-config-pago{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:9999;display:none;
   align-items:center;justify-content:center;background:rgba(0,0,0,.75);padding:16px}
-#modal-config-pago .mcp-inner{background:var(--surface);border:1px solid var(--border);
+#modal-config-pago .mcp-inner{position:relative;z-index:10000;background:var(--surface);border:1px solid var(--border);
   border-radius:12px;width:100%;max-width:560px;overflow:hidden}
 .mcp-head{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);
   display:flex;align-items:center;justify-content:space-between}
@@ -461,18 +461,26 @@ tbody tr:last-child td{border-bottom:none}
   <!-- TAB UPLOAD -->
   <div class="panel active" id="tab-upload">
     <div class="stats-row">
-      <div class="stat blue"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Total facturas</div></div>
-      <div class="stat green"><div class="stat-val" id="s-rev">0</div><div class="stat-lbl">Por pagar</div></div>
-      <div class="stat yellow"><div class="stat-val" id="s-pend">0</div><div class="stat-lbl">Pendientes revisión</div></div>
-      <div class="stat red"><div class="stat-val" id="s-err">0</div><div class="stat-lbl">Con error OCR</div></div>
-      <div class="stat"><div class="stat-val" id="s-imp">$0</div><div class="stat-lbl">Importe pendiente</div></div>
-      <div class="stat" style="border-left-color:#a78bfa">
-        <div class="stat-val" id="s-mes" style="color:#a78bfa">$0</div>
-        <div class="stat-lbl" id="s-mes-lbl">Este mes</div>
+      <!-- Cantidades -->
+      <div class="stat blue">
+        <div class="stat-lbl" style="text-transform:uppercase;letter-spacing:.5px;font-size:9px;margin-bottom:2px;color:var(--muted)">Cantidades</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+          <div><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Total</div></div>
+          <div><div class="stat-val" id="s-cnt-revision" style="color:#f59e0b">0</div><div class="stat-lbl">En revisión</div></div>
+          <div><div class="stat-val" id="s-cnt-pagar" style="color:#22c55e">0</div><div class="stat-lbl">Por pagar</div></div>
+          <div><div class="stat-val" id="s-cnt-circuito" style="color:#f97316">0</div><div class="stat-lbl">En circuito</div></div>
+          <div><div class="stat-val" id="s-cnt-pagadas" style="color:#a78bfa">0</div><div class="stat-lbl">Pagadas</div></div>
+        </div>
       </div>
-      <div class="stat" style="border-left-color:#64748b">
-        <div class="stat-val" id="s-mesant" style="color:#94a3b8">$0</div>
-        <div class="stat-lbl" id="s-mesant-lbl">Mes anterior</div>
+      <!-- Importes -->
+      <div class="stat" style="border-left-color:#6366f1">
+        <div class="stat-lbl" style="text-transform:uppercase;letter-spacing:.5px;font-size:9px;margin-bottom:2px;color:var(--muted)">Importes</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+          <div><div class="stat-val" id="s-imp-revision" style="color:#f59e0b">$0</div><div class="stat-lbl">En revisión</div></div>
+          <div><div class="stat-val" id="s-imp-pagar" style="color:#22c55e">$0</div><div class="stat-lbl">Por pagar</div></div>
+          <div><div class="stat-val" id="s-imp-circuito" style="color:#f97316">$0</div><div class="stat-lbl">En circuito</div></div>
+          <div><div class="stat-val" id="s-imp-pagadas" style="color:#a78bfa">$0</div><div class="stat-lbl">Pagadas</div></div>
+        </div>
       </div>
     </div>
     <div class="upload-area" id="drop-zone">
@@ -842,7 +850,11 @@ tbody tr:last-child td{border-bottom:none}
     <div class="toolbar">
       <input type="text" class="search-box" id="search-pagar" placeholder="Buscar proveedor, CUIT, número..."/>
 
-      <button class="btn btn-sm" style="background:#f97316;color:#fff;font-weight:600"
+      <button class="btn btn-sm" id="btn-enviar-circuito"
+        style="background:#f97316;color:#fff;font-weight:600"
+        onclick="enviarACircuito()" title="Generá la orden y enviá las facturas seleccionadas al circuito de pago">
+        🔄 Enviar a circuito de pago
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="toggleViewer()" title="Mostrar/ocultar visor">👁 Visor</button>
     </div>
     <div class="pagar-table-wrap">
@@ -877,8 +889,12 @@ tbody tr:last-child td{border-bottom:none}
         Órdenes de pago generadas — esperando confirmación de acreditación bancaria
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-success btn-sm" onclick="confirmarCircuito()">✅ Confirmar pago</button>
-        <button class="btn btn-ghost btn-sm" onclick="bajarCircuito()" style="color:var(--red)">↩ Bajar pago</button>
+        <button class="btn btn-success btn-sm" style="font-weight:700;font-size:13px"
+          onclick="exportarYPagar()" title="Genera Excel + PDF y marca las seleccionadas como Pagadas">
+          📊 Exportar y marcar como pagadas
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="bajarCircuito()" style="color:var(--red)"
+          title="Devolver a Facturas por Pagar">↩ Bajar</button>
       </div>
     </div>
     <div class="pagar-summary" id="circuito-summary"></div>
@@ -1408,7 +1424,7 @@ tbody tr:last-child td{border-bottom:none}
           </div>
           <div id="mcp-transf-monto-row" class="mcp-monto-row" style="display:none">
             <label>Monto</label>
-            <input id="mcp-transf-monto" type="number" step="0.01" min="0.01"
+            <input id="mcp-transf-monto" type="number" step="0.01"
               placeholder="0.00" oninput="actualizarMcpResumen()"/>
           </div>
           <div id="mcp-fecha-venc-row" class="mcp-monto-row" style="display:none">
@@ -1432,7 +1448,7 @@ tbody tr:last-child td{border-bottom:none}
           </div>
           <div id="mcp-canje-monto-row" class="mcp-monto-row" style="display:none">
             <label>Monto del canje</label>
-            <input id="mcp-canje-monto" type="number" step="0.01" min="0.01"
+            <input id="mcp-canje-monto" type="number" step="0.01"
               placeholder="0.00" oninput="actualizarMcpResumen()"/>
           </div>
         </div>
@@ -1601,7 +1617,10 @@ let _pagarSort  = { col:'fecha_emision', desc:false };   // default: fecha ascen
 let _pagadasSort= { col:'fecha_pago',    desc:true  };   // default: más reciente primero
 let _page     = 1;
 const PAGE_SZ = 50;
-let _viewerId = null;
+let _viewerId        = null;
+let _pendingAprobarId  = null;
+let _pendingAprobarIds = null;
+let _ordenDescargada   = false;
 let _syncing  = false;
 
 // ═══════════════════════════════════════════════════════
@@ -1951,9 +1970,6 @@ async function _smartSync() {
     _lastSyncTime    = Date.now();
 
     // Notificar al usuario si hay facturas nuevas de otro operador
-    // Aplicar config por defecto a facturas revisadas nuevas
-    _aplicarConfigDefecto();
-
     if (newCount > prevCount) {
       const nuevas = DB.invoices.filter(i => !prevIds.has(i.id));
       const sesion = getSesion();
@@ -2994,7 +3010,7 @@ function validateFields(c) {
   if(!c.cuit)w.push('⚠ No se detectó el CUIT');
   else if(!validarCuit(c.cuit))w.push('⚠ CUIT con dígito verificador incorrecto');
   if(!c.numero_factura)w.push('⚠ No se detectó el número de factura');
-  if(!c.total)w.push('⚠ No se detectó el importe total');
+  if(c.total == null)w.push('⚠ No se detectó el importe total'); // null/undefined — no alertar si es 0 o negativo
   if(!c.fecha_emision)w.push('⚠ No se detectó la fecha de emisión');
   if(!c.cae && c.tipo !== 'Cupón de Póliza de Seguro'
      && !esTicket({tipo:c.tipo}) && !esDocGenerico({tipo:c.tipo}))
@@ -3030,40 +3046,37 @@ function checkDuplicate(c) {
 // ═══════════════════════════════════════════════════════
 function updateStats() {
   const inv = DB.invoices;
-  document.getElementById('s-total').textContent = inv.length;
-  document.getElementById('s-rev').textContent   = inv.filter(i=>i.estado_rev==='REVISADA').length;
-  document.getElementById('s-pend').textContent  = inv.filter(i=>i.estado_rev==='PENDIENTE'||i.estado_rev==='OBSERVADA').length;
-  document.getElementById('s-err').textContent   = inv.filter(i=>i.estado_ocr==='ERROR').length;
-  document.getElementById('s-imp').textContent   = fmtMoneyShort(
-    inv.filter(i=>i.estado_rev!=='PAGADA').reduce((a,i)=>a+(totalEfectivo(i)||0),0)
+
+  // ── Cantidades por estado ────────────────────────────────────────────────────
+  const enRevision = inv.filter(i =>
+    ['PENDIENTE','REVISADA','OBSERVADA','PEND. APROBACIÓN'].includes(i.estado_rev)
+  );
+  const porPagar   = inv.filter(i =>
+    ['REVISADA','PEND. APROBACIÓN','OBSERVADA'].includes(i.estado_rev)
+  );
+  const enCircuito = inv.filter(i => i.estado_rev === 'EN CIRCUITO DE PAGO');
+  const pagadas    = inv.filter(i =>
+    ['PAGADA','CANJEADO','PAGO PARCIAL','CANJE PARCIAL'].includes(i.estado_rev)
   );
 
-  // Totales por mes (usando fecha_emision)
-  const hoy     = new Date();
-  const mesAct  = hoy.getMonth();
-  const anoAct  = hoy.getFullYear();
-  const mesAnt  = mesAct === 0 ? 11 : mesAct - 1;
-  const anoAnt  = mesAct === 0 ? anoAct - 1 : anoAct;
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
 
-  const esMesActual  = i => { if(!i.fecha_emision)return false; const d=new Date(i.fecha_emision); return d.getMonth()===mesAct&&d.getFullYear()===anoAct; };
-  const esMesAnterior= i => { if(!i.fecha_emision)return false; const d=new Date(i.fecha_emision); return d.getMonth()===mesAnt&&d.getFullYear()===anoAnt; };
+  // Cantidades
+  set('s-total',         inv.length);
+  set('s-cnt-revision',  enRevision.length);
+  set('s-cnt-pagar',     porPagar.length);
+  set('s-cnt-circuito',  enCircuito.length);
+  set('s-cnt-pagadas',   pagadas.length);
 
-  const totalMesAct = inv.filter(esMesActual) .reduce((a,i)=>a+(totalEfectivo(i)||0),0);
-  const totalMesAnt = inv.filter(esMesAnterior).reduce((a,i)=>a+(totalEfectivo(i)||0),0);
-  const countMesAct = inv.filter(esMesActual).length;
-  const countMesAnt = inv.filter(esMesAnterior).length;
+  // Importes
+  const imp = arr => fmtMoneyShort(arr.reduce((a,i)=>a+(totalEfectivo(i)||0),0));
+  set('s-imp-revision',  imp(enRevision));
+  set('s-imp-pagar',     imp(porPagar));
+  set('s-imp-circuito',  imp(enCircuito));
+  set('s-imp-pagadas',   imp(pagadas));
 
-  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const elMesAct = document.getElementById('s-mes');
-  const elMesAnt = document.getElementById('s-mesant');
-  if(elMesAct){
-    elMesAct.textContent = fmtMoneyShort(totalMesAct);
-    document.getElementById('s-mes-lbl').textContent = `${meses[mesAct]} ${anoAct} (${countMesAct} fact.)`;
-  }
-  if(elMesAnt){
-    elMesAnt.textContent = fmtMoneyShort(totalMesAnt);
-    document.getElementById('s-mesant-lbl').textContent = `${meses[mesAnt]} ${mesAnt<mesAct?anoAct:anoAnt} (${countMesAnt} fact.)`;
-  }
+  // Badge y circuito
+  _actualizarBadgePagar();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -3973,40 +3986,40 @@ function renderPagar() {
   const totalImporte  = items.reduce((a,i)=>a+(totalEfectivo(i)||0),0);
   const pendAprobacion = items.filter(i=>i.estado_rev==='PEND. APROBACIÓN');
   const totalPendApro  = pendAprobacion.reduce((a,i)=>a+(saldoPendiente(i)||0),0);
-  // Agrupar por mes/período para los cuadritos
-  const _periodos = {};
-  items.forEach(inv => {
-    // Normalizar a YYYY-MM para agrupar correctamente
-    const p = normalizarPeriodo(inv.periodo_contable || '');
-    if (!_periodos[p]) _periodos[p] = { count:0, total:0 };
-    _periodos[p].count++;
-    _periodos[p].total += totalEfectivo(inv)||0;
-  });
-  const _periodosSorted = Object.entries(_periodos)
-    .sort((a,b) => b[0].localeCompare(a[0])).slice(0, 3);
+  // Desglose por tipo de pago configurado
+  const _tipos = { transferencia:{label:'💳 Transferencia',count:0,total:0},
+                   cheque:        {label:'🧾 Cheque',       count:0,total:0},
+                   canje:         {label:'🔄 Canje',        count:0,total:0},
+                   mixto:         {label:'⚡ Mixto',        count:0,total:0},
+                   sin_config:    {label:'⚙ Sin configurar',count:0,total:0} };
 
-  const _periodoHtml = _periodosSorted.map(([p, v]) => {
-    const label = p ? periodoToInput(p) : 'Sin período';
-    return `<div class="pagar-stat">
-      <div class="pagar-stat-lbl">${label}</div>
+  items.forEach(inv => {
+    const cfg = getConfigPago(inv.id);
+    const monto = totalEfectivo(inv) || 0;
+    if (!cfg) {
+      _tipos.sin_config.count++; _tipos.sin_config.total += monto;
+    } else {
+      const t = cfg.tipo || 'sin_config';
+      if (_tipos[t]) { _tipos[t].count++; _tipos[t].total += monto; }
+      else           { _tipos.sin_config.count++; _tipos.sin_config.total += monto; }
+    }
+  });
+
+  const _tiposHtml = Object.entries(_tipos)
+    .filter(([,v]) => v.count > 0)
+    .map(([,v]) => `<div class="pagar-stat">
+      <div class="pagar-stat-lbl">${v.label}</div>
       <div class="pagar-stat-val">${fmtMoneyShort(v.total)}</div>
       <div class="pagar-stat-sub">${v.count} factura(s)</div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 
   document.getElementById('pagar-summary').innerHTML = `
-    <div class="pagar-stat">
+    <div class="pagar-stat green">
       <div class="pagar-stat-lbl">Total a pagar</div>
       <div class="pagar-stat-val">${fmtMoneyShort(totalImporte)}</div>
       <div class="pagar-stat-sub">${items.length} factura(s)</div>
     </div>
-    ${pendAprobacion.length ? `
-    <div class="pagar-stat orange">
-      <div class="pagar-stat-lbl">Pend. aprobación</div>
-      <div class="pagar-stat-val">${pendAprobacion.length}</div>
-      <div class="pagar-stat-sub">${fmtMoneyShort(totalPendApro)}</div>
-    </div>` : ''}
-    ${_periodoHtml}
+    ${_tiposHtml}
   `;
   // Banner de aprobación eliminado — la aprobación es via "Aprobar seleccionadas"
   const avisoEl = document.getElementById('aviso-aprobador');
@@ -4025,7 +4038,7 @@ function renderPagar() {
   } else {
     tbody.innerHTML = slice.map(inv => `
     <tr data-id="${inv.id}" onclick="openViewer(${inv.id},true)"
-        style="cursor:pointer;${inv.estado_rev==='PEND. APROBACIÓN'?'background:rgba(249,115,22,.06);border-left:3px solid #f97316':''}"
+        style="cursor:pointer"
         title="${inv.estado_rev==='PEND. APROBACIÓN'?'Pendiente de aprobación':'Clic para ver en el visor'}">
       <td onclick="event.stopPropagation()"><input type="checkbox" class="cb-pagar" data-id="${inv.id}"
         style="width:16px;height:16px;cursor:pointer;accent-color:var(--green)"/></td>
@@ -4045,7 +4058,7 @@ function renderPagar() {
         ${totalEfectivo(inv)!=null?fmtMoney(totalEfectivo(inv)):'—'}
       </td>
       <td class="td-num" style="font-weight:700;color:${tienePagoParcial(inv)?'#a855f7':'var(--accent)'}">
-        ${fmtMoney(saldoPendiente(inv))}
+        ${(()=>{ const s=saldoPendiente(inv); return `<span style="color:${s<0?'#22c55e':'var(--accent)'}">${fmtMoney(s)}</span>`; })()}
         ${(()=>{ const cfg=getConfigPago(inv.id); if(!cfg)return '';
           return '<div style="margin-top:3px"><span class=\"bdg-config\">' + resumenConfig(cfg) + '</span></div>'; })()}
       </td>
@@ -4940,7 +4953,7 @@ async function confirmarOrdenPago() {
     return;
   }
   const btn = document.getElementById('mop-btn-siguiente');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   btn.textContent = 'Procesando…';
   try {
     cerrarModalOrden();
@@ -5390,21 +5403,46 @@ function loadProveedores() {
 function saveProveedores(data) {
   _proveedoresCache = data;
   localStorage.setItem(LS_KEY_PROV, JSON.stringify(data));
-  // Sincronizar a Sheets en background
-  if (SCRIPT_URL) {
-    apiCall('saveProveedores', { proveedores: data }).catch(e =>
-      console.warn('Error sincronizando proveedores:', e)
-    );
-  }
+  if (!SCRIPT_URL) return;
+  // Sync a Sheets con hasta 3 reintentos automáticos
+  const _trySync = (intentos) => {
+    apiCall('saveProveedores', { proveedores: data })
+      .then(r => { if (!r?.ok && intentos > 0) setTimeout(()=>_trySync(intentos-1), 3000); })
+      .catch(() => { if (intentos > 0) setTimeout(()=>_trySync(intentos-1), 3000); });
+  };
+  _trySync(3);
 }
+
 
 async function loadProveedoresFromSheets() {
   if (!SCRIPT_URL) return;
   try {
     const res = await apiCall('getProveedores', {});
     if (res?.proveedores && Object.keys(res.proveedores).length) {
-      _proveedoresCache = res.proveedores;
-      localStorage.setItem(LS_KEY_PROV, JSON.stringify(res.proveedores));
+      // Merge: combinar datos de Sheets con los de localStorage
+      // (localStorage puede tener datos más recientes que Sheets)
+      const _local = loadProveedores();
+      const _sheets = res.proveedores;
+      const _merged = { ..._sheets };
+      // Para cada proveedor: si localStorage tiene más campos rellenos, preferir localStorage
+      for (const cuit of Object.keys(_local)) {
+        if (!_merged[cuit]) {
+          _merged[cuit] = _local[cuit]; // nuevo en local → agregar
+        } else {
+          // Mantener el campo con más datos (proteger CBU, mail, etc.)
+          for (const campo of ['cbu','mail','telefono','notas','nombre']) {
+            if (_local[cuit][campo] && !_merged[cuit][campo]) {
+              _merged[cuit][campo] = _local[cuit][campo];
+            }
+          }
+        }
+      }
+      _proveedoresCache = _merged;
+      localStorage.setItem(LS_KEY_PROV, JSON.stringify(_merged));
+      // Si el merge tiene más datos que Sheets → guardar de vuelta
+      if (JSON.stringify(_merged) !== JSON.stringify(_sheets)) {
+        apiCall('saveProveedores', { proveedores: _merged }).catch(()=>{});
+      }
     }
   } catch(e) {
     console.warn('Error cargando proveedores desde Sheets:', e);
@@ -5427,12 +5465,17 @@ function syncProveedorDesdeFactura(inv) {
         fecha_alta:    new Date().toISOString(),
       };
     } else {
-      if (inv.proveedor && inv.proveedor.length > (provs[cuit].nombre||'').length)
+      // Solo actualizar nombre si el actual está vacío (NUNCA borrar datos existentes)
+      if (inv.proveedor && !provs[cuit].nombre)
         provs[cuit].nombre = inv.proveedor;
       if (inv.condicion_iva && !provs[cuit].condicion_iva)
         provs[cuit].condicion_iva = inv.condicion_iva;
+      // IMPORTANTE: nunca tocar cbu, mail, telefono, notas — datos cargados manualmente
     }
-    // Guardar solo en localStorage — el sync a Sheets se hace en batch aparte
+    // Solo guardar si hubo un cambio real (evitar escrituras innecesarias)
+    const _before = JSON.stringify(loadProveedores()[cuit]||{});
+    const _after  = JSON.stringify(provs[cuit]);
+    if (_before === _after) return; // sin cambios → no guardar
     _proveedoresCache = provs;
     localStorage.setItem(LS_KEY_PROV, JSON.stringify(provs));
     // Sync a Sheets en background sin bloquear ni propagar errores
@@ -5916,11 +5959,15 @@ function registrarAudit(tipo, descripcion, datos={}) {
 function switchTab(id) {
   document.querySelectorAll('.tab').forEach(t =>
     t.classList.toggle('active', t.dataset.tab === id));
-  document.querySelectorAll('.panel').forEach(p =>
-    p.classList.toggle('active', p.id === id));
+  document.querySelectorAll('.panel').forEach(p => {
+    const show = p.id === id;
+    p.classList.toggle('active', show);
+    p.style.display = show ? '' : 'none';
+  });
   if (id === 'tab-table')       renderTable();
   if (id === 'tab-upload')      updateStats();
   if (id === 'tab-pagar')       renderPagar();
+  if (id === 'tab-circuito')    renderCircuito();
   if (id === 'tab-pagadas')     renderPagadas();
   if (id === 'tab-proveedores') renderProveedores();
   if (id === 'tab-auditoria')   renderAuditoria();
@@ -6244,7 +6291,9 @@ function montoPagado(inv) {
 
 // Saldo pendiente de una factura
 function saldoPendiente(inv) {
-  const total = Math.abs(totalEfectivo(inv) || 0);
+  const total = totalEfectivo(inv) || 0;
+  // Documentos con total negativo (reintegros, compensaciones) → valor negativo
+  if (total < 0) return total;
   const pagado = montoPagado(inv);
   return Math.max(0, total - pagado);
 }
@@ -6702,20 +6751,25 @@ let _mcpTipo      = null;  // 'transferencia' | 'canje' | 'mixto'
 let _mcpTransfSub = null;  // 'total' | 'parcial'
 let _mcpCanjeSub  = null;
 
+let _mcpOpenTimer = null;
 function abrirModalConfig(id) {
-  console.log('[Config] Abriendo para ID:', id);
+  // Debounce: ignorar llamadas duplicadas en menos de 300ms
+  if (_mcpOpenTimer) clearTimeout(_mcpOpenTimer);
+  _mcpOpenTimer = setTimeout(() => {
+    _mcpOpenTimer = null;
+    _abrirModalConfigImpl(id);
+  }, 50);
+}
+function _abrirModalConfigImpl(id) {
   try {
-  console.log('[Config] 1. Verificando permisos...');
   if (!puedo('configurar_pago')) { toast('Sin permiso para configurar pagos','error'); return; }
-  console.log('[Config] 2. Buscando factura...');
   const inv = DB.invoices.find(i => i.id === id);
   if (!inv) { toast('Factura no encontrada','error'); return; }
-  console.log('[Config] 3. Estado:', inv.estado_rev);
   if (['PAGADA','CANJEADO','PAGO PARCIAL','CANJE PARCIAL','EN CIRCUITO DE PAGO'].includes(inv.estado_rev)) {
     toast('Esta factura ya fue procesada y no se puede reconfigurar','warn'); return;
   }
-  console.log('[Config] 4. Seteando _mcpFacturaId...');
   _mcpFacturaId = id;
+  _syncPaused = true; // pausar sync mientras el modal está abierto
 
   const total   = Math.abs(totalEfectivo(inv)||0);
   const saldo   = saldoPendiente(inv);
@@ -6763,15 +6817,21 @@ function abrirModalConfig(id) {
     setMcpSubtipo('transf', 'total');
   }
 
-  document.getElementById('modal-config-pago').style.display = 'flex';
+  // Mover el modal directamente al body para evitar problemas de CSS containment
+  const _mcpEl = document.getElementById('modal-config-pago');
+  document.body.appendChild(_mcpEl);
+  _mcpEl.style.cssText = 'display:flex !important;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;align-items:center;justify-content:center;background:rgba(0,0,0,.8)';
   } catch(e) {
     console.error('[Config] ERROR COMPLETO:', e.message, e.stack);
-    alert('Error en modal de configuración: ' + e.message);
+    console.error('[Config] ERROR:', e.message, e.stack); toast('Error: ' + e.message, 'error');
   }
 }
 
 function cerrarModalConfig() {
-  document.getElementById('modal-config-pago').style.display = 'none';
+  const _mcpElC = document.getElementById('modal-config-pago');
+  if (_mcpElC) { _mcpElC.style.cssText = 'display:none'; }
+  _mcpFacturaId = null;
+  _syncPaused = false;
   _mcpFacturaId = null;
 }
 
@@ -7176,7 +7236,7 @@ async function _buildPdfHtmlConfig(ids, modo) {
     (hayMixto ? '<th style="text-align:right">Canje</th>' : '') +
     '<th style="text-align:right">Total a pagar</th><th>CBU</th>' +
     '</tr></thead><tbody>' + filas + '</tbody>' +
-    '<tfoot><tr><td colspan="' + (hayMixto?6:5) + '" style="font-weight:700;padding:6px 8px;background:#f1f5f9">TOTAL A TRANSFERIR</td>' +
+    '<tfoot><tr><td colspan="' + (hayMixto?6:5) + '" style="font-weight:700;padding:6px 8px;background:#f1f5f9">' + (facturas.some(i=>totalEfectivo(i)<0)?'TOTAL NETO A TRANSFERIR (incluye reintegros)':'TOTAL A TRANSFERIR') + '</td>' +
     (hayMixto ? '<td style="background:#f1f5f9"></td>' : '') +
     '<td class="num" style="font-weight:800;background:#f1f5f9">' + fmtAR(totalGen) + '</td>' +
     '<td style="background:#f1f5f9"></td></tr></tfoot></table>' +
@@ -7492,11 +7552,7 @@ async function _ejecutarAprobacion(ids) {
   renderPagar(); renderCircuito(); renderPagadas(); renderTable(); updateStats();
   closeModalOrdenPago();
   toast('🔄 ' + procesadas + ' factura(s) en circuito de pago — esperando confirmación', 'success', 5000);
-  // Cambiar al tab de circuito
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content,.panel').forEach(p => p.style.display='none');
-  const tabCircuito = document.querySelector('[data-tab="tab-circuito"]');
-  if (tabCircuito) { tabCircuito.classList.add('active'); document.getElementById('tab-circuito').style.display='block'; renderCircuito(); }
+  switchTab('tab-circuito');
 }
 
 
@@ -8383,8 +8439,16 @@ async function aplicarImportacion(cambios) {
 
   // Guardar todo en batch
   updateLocalCache();
-  await batchSaveInvoices(DB.invoices.filter(i => cambios.some(c => c.id === i.id)));
-  
+  // Guardar en Sheets las facturas modificadas
+  const _modificadas = DB.invoices.filter(i => cambios.some(ch => ch.id === i.id));
+  if (SCRIPT_URL && _modificadas.length) {
+    try {
+      await apiCall('saveMany', { invoices: _modificadas.map(inv => ({
+        id: inv.id, periodo_contable: inv.periodo_contable, categoria: inv.categoria,
+        centro_costo: inv.centro_costo, concepto: inv.concepto, observaciones: inv.observaciones
+      }))});
+    } catch(e) { console.warn('Error guardando importación:', e); }
+  }
   statusEl.textContent = `✅ ${ok} factura(s) actualizadas correctamente`;
   window._importCambios = null;
 
@@ -8510,7 +8574,7 @@ function renderCircuito() {
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-success btn-sm" style="font-size:11px"
-            onclick="confirmarCircuitoUna(${inv.id})" title="Confirmar acreditación">✅</button>
+            onclick="exportarYPagarUna(${inv.id})" title="Exportar y marcar como pagada">📊</button>
           <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red)"
             onclick="bajarCircuitoUna(${inv.id})" title="Bajar — vuelve a Pend. aprobación">↩</button>
         </div>
@@ -8618,6 +8682,176 @@ async function _procesarBaja(ids) {
   updateLocalCache();
   renderCircuito(); renderPagar(); renderTable(); updateStats();
   toast(`↩ ${ids.length} factura(s) devuelta(s) a Pend. aprobación`, 'warn', 4000);
+}
+
+
+// ── Enviar facturas seleccionadas al circuito de pago ───────────────────────
+async function enviarACircuito() {
+  const ids = [...document.querySelectorAll('.cb-pagar:checked')]
+    .map(cb => parseInt(cb.dataset.id))
+    .filter(id => {
+      const inv = DB.invoices.find(i => i.id === id);
+      return inv && ['REVISADA','PEND. APROBACIÓN','OBSERVADA'].includes(inv.estado_rev);
+    });
+
+  if (!ids.length) { toast('Seleccioná al menos una factura', 'warn'); return; }
+
+  // Facturas sin configurar → aplicar transferencia total por defecto
+  ids.forEach(id => {
+    if (!getConfigPago(id)) {
+      const inv = DB.invoices.find(i => i.id === id);
+      setConfigPago(id, {
+        tipo: 'transferencia', transf_subtipo: 'total',
+        transf_monto: totalEfectivo(inv) || 0,  // negativo para reintegros
+        canje_subtipo: null, canje_monto: null,
+        obs: '', fecha_config: new Date().toISOString(),
+      });
+    }
+  });
+
+  // Pasar directamente a EN CIRCUITO DE PAGO
+  const ses = getSesion();
+  for (const id of ids) {
+    const inv = DB.invoices.find(i => i.id === id);
+    if (!inv) continue;
+    inv.estado_rev    = 'EN CIRCUITO DE PAGO';
+    inv.fecha_circuito = new Date().toISOString();
+    inv.historial = inv.historial || [];
+    inv.historial.push({ campo:'estado_rev', label:'Enviado al circuito',
+      nuevo:'EN CIRCUITO DE PAGO', fecha:new Date().toLocaleString('es-AR') });
+  }
+
+  await Promise.all(ids.map(id => {
+    const inv = DB.invoices.find(i => i.id === id);
+    return inv ? saveInvoiceToSheets(inv) : Promise.resolve();
+  }));
+
+  updateLocalCache();
+  renderPagar(); renderCircuito(); renderTable(); updateStats();
+  toast(`🔄 ${ids.length} factura(s) enviadas al circuito de pago`, 'success', 4000);
+
+  // Ir a la solapa En circuito
+  switchTab('tab-circuito');
+}
+
+
+// ── Exportar Excel + PDF y marcar como Pagadas ──────────────────────────────
+async function exportarYPagar() {
+  const ids = _getCircuitoSeleccionados();
+  if (!ids.length) { toast('Seleccioná al menos una factura', 'warn'); return; }
+  await _procesarExportarYPagar(ids);
+}
+
+async function exportarYPagarUna(id) {
+  await _procesarExportarYPagar([id]);
+}
+
+async function _procesarExportarYPagar(ids) {
+  const facturas = ids.map(id => DB.invoices.find(i=>i.id===id)).filter(Boolean);
+  if (!facturas.length) return;
+
+  const btn = document.querySelector('[onclick="exportarYPagar()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+
+  try {
+    // 1. Generar PDF de orden de pago
+    _pdfHtmlCache = await _buildPdfHtmlConfig(ids, 'transferencia');
+    if (_pdfHtmlCache) descargarSoloPDF();
+
+    // 2. Generar Excel para tesorería
+    await new Promise(r => setTimeout(r, 500)); // pausa para que inicie el PDF
+    await _buildExcelConfig(ids);
+
+    // 3. Registrar pagos y marcar como PAGADAS
+    const ses = getSesion();
+    const quien = ses?.nombre || ses?.usuario || 'Sistema';
+
+    for (const inv of facturas) {
+      const cfg   = getConfigPago(inv.id);
+      const saldo = totalEfectivo(inv) || 0;
+      const pagos = getPagos(inv);
+
+      if (cfg?.tipo === 'canje') {
+        pagos.push({ id:Date.now()+inv.id, fecha:new Date().toISOString(),
+          monto:cfg.canje_monto||saldo, tipo:'canje', observacion:'Exportado por: '+quien });
+      } else if (cfg?.tipo === 'mixto') {
+        if ((cfg.transf_monto||0)>0) pagos.push({ id:Date.now()+inv.id,
+          fecha:new Date().toISOString(), monto:cfg.transf_monto, tipo:'pago',
+          observacion:'Exportado por: '+quien+' — Transf.' });
+        if ((cfg.canje_monto||0)>0) pagos.push({ id:Date.now()+inv.id+1,
+          fecha:new Date().toISOString(), monto:cfg.canje_monto, tipo:'canje',
+          observacion:'Exportado por: '+quien+' — Canje' });
+      } else {
+        pagos.push({ id:Date.now()+inv.id, fecha:new Date().toISOString(),
+          monto:cfg?.transf_monto||saldo, tipo:'pago', observacion:'Exportado por: '+quien });
+      }
+
+      inv.pagos = pagos;
+      setPagosLS(inv.id, pagos);
+      recalcularEstado(inv);
+      borrarConfigPago(inv.id);
+      inv.historial = inv.historial||[];
+      inv.historial.push({ campo:'estado_rev', label:'Pagada — exportado a tesorería',
+        nuevo:inv.estado_rev, fecha:new Date().toLocaleString('es-AR') });
+    }
+
+    await Promise.all(facturas.map(inv => saveInvoiceToSheets(inv)));
+    updateLocalCache();
+    renderCircuito(); renderPagadas(); renderTable(); updateStats();
+    toast(`✅ ${facturas.length} factura(s) exportadas y marcadas como pagadas`, 'success', 5000);
+
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '📊 Exportar y marcar como pagadas'; }
+  }
+}
+
+// ── Generar Excel de orden de pago ────────────────────────────────────────────
+async function _buildExcelConfig(ids) {
+  const facturas = ids.map(id => DB.invoices.find(i=>i.id===id)).filter(Boolean);
+  if (!facturas.length) return;
+
+  const wb   = XLSX.utils.book_new();
+  const date = new Date().toLocaleDateString('es-AR');
+  const total = facturas.reduce((a,i)=>{
+    const cfg = getConfigPago(i.id);
+    return a + (cfg?.transf_monto || cfg?.canje_monto || totalEfectivo(i) || 0);
+  }, 0);
+
+  const header = ['ID','Tipo','Nro. Factura','CUIT','Proveedor','F. Emisión','Tipo Pago','Total a Pagar','CBU','Mail','Celular'];
+  const rows = facturas.map(inv => {
+    const cfg = getConfigPago(inv.id);
+    const dp  = getDatosProv(inv.cuit);
+    const monto = cfg?.transf_monto || cfg?.canje_monto || totalEfectivo(inv) || 0;
+    const tipoPago = cfg ? (cfg.tipo === 'transferencia' ? 'Transferencia' :
+                            cfg.tipo === 'cheque' ? 'Cheque' :
+                            cfg.tipo === 'canje'  ? 'Canje' : 'Mixto') : 'Transferencia';
+    return [
+      inv.id, inv.tipo||'', inv.numero_factura||'', inv.cuit||'', inv.proveedor||'',
+      inv.fecha_emision ? new Date(inv.fecha_emision) : '',
+      tipoPago, monto, dp.cbu||inv.cbu||'', dp.mail||'', dp.telefono||''
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{wch:6},{wch:10},{wch:16},{wch:14},{wch:35},{wch:12},{wch:14},{wch:16},{wch:24},{wch:28},{wch:16}];
+
+  // Formato fecha y moneda
+  rows.forEach((_,ri) => {
+    const r = ri+2;
+    const fc = ws['F'+r]; if(fc) fc.z = 'DD/MM/YYYY';
+    const mc = ws['H'+r]; if(mc && typeof mc.v==='number') mc.z = '#,##0.00';
+  });
+
+  // Fila total
+  const hasNeg = facturas.some(i=>totalEfectivo(i)<0);
+  const filaTotal = ['','','','','','',hasNeg?'TOTAL NETO (con reintegros)':'TOTAL', total, '', '', ''];
+  XLSX.utils.sheet_add_aoa(ws, [filaTotal], {origin: rows.length+2});
+  const tc = ws['H'+(rows.length+2)]; if(tc) tc.z = '#,##0.00';
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Orden de Pago');
+
+  const filename = `OrdenPago_${date.replace(/\//g,'-')}_${facturas.length}fact.xlsx`;
+  XLSX.writeFile(wb, filename);
 }
 
 // Sort via event delegation (único listener, sin duplicados)
