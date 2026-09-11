@@ -448,7 +448,7 @@ tbody tr:last-child td{border-bottom:none}
   <button class="tab" data-tab="tab-table">⏳ Pendientes de Revisión</button>
   <button class="tab" data-tab="tab-pagar" id="tab-btn-pagar">💳 Facturas por Pagar <span id="badge-pagar" style="display:none;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:middle;transition:opacity 1s ease"></span></button>
   <button class="tab" data-tab="tab-circuito">🔄 En circuito de pago <span id="badge-circuito" style="display:none;background:#f97316;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:middle;transition:opacity 1s ease"></span></button>
-  <button class="tab" data-tab="tab-pagadas">✅ Facturas Pagadas</button>
+  <button class="tab" data-tab="tab-pagadas">✅ Conciliadas</button>
   <button class="tab" data-tab="tab-proveedores">🏢 Proveedores</button>
   <button class="tab" data-tab="tab-auditoria">📋 Auditoría</button>
   <button class="tab" data-tab="tab-admin" id="tab-btn-admin" style="display:none">⚙ Admin</button>
@@ -888,10 +888,16 @@ tbody tr:last-child td{border-bottom:none}
       <div style="font-size:13px;color:var(--muted)">
         Órdenes de pago generadas — esperando confirmación de acreditación bancaria
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-success btn-sm" style="font-weight:700;font-size:13px"
-          onclick="exportarYPagar()" title="Genera Excel + PDF y marca las seleccionadas como Pagadas">
-          📊 Exportar y marcar como pagadas
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" style="font-weight:700"
+          onclick="exportarExcelCircuito()"
+          title="Exportar Excel para enviar al jefe (no marca como pagadas)">
+          📊 Exportar Excel
+        </button>
+        <button class="btn btn-success btn-sm" style="font-weight:700"
+          onclick="exportarYPagar()"
+          title="Exportar + marcar las seleccionadas como Conciliadas">
+          ✅ Exportar y conciliar
         </button>
         <button class="btn btn-ghost btn-sm" onclick="bajarCircuito()" style="color:var(--red)"
           title="Devolver a Facturas por Pagar">↩ Bajar</button>
@@ -4176,15 +4182,16 @@ let _pagadasPage = 1;
 function renderPagadas() {
   const q = (document.getElementById('search-pagadas')||{value:''}).value.toLowerCase();
   const items = DB.invoices.filter(i =>
-    i.estado_rev === 'PAGADA' &&
+    ['PAGADA','CANJEADO','PAGO PARCIAL','CANJE PARCIAL'].includes(i.estado_rev) &&
     _matchSearch(i,q)
   );
 
-  // Resumen
+  // Resumen — el total neto incluye documentos negativos (compensaciones)
   const totalPagado = items.reduce((a,i)=>a+(totalEfectivo(i)||0),0);
+  const tieneCompensaciones = items.some(i => (totalEfectivo(i)||0) < 0);
   document.getElementById('pagadas-summary').innerHTML = `
     <div class="pagar-stat"><div class="pagar-stat-val">${items.length}</div>
-      <div class="pagar-stat-lbl">Facturas pagadas</div></div>
+      <div class="pagar-stat-lbl">Facturas Conciliadas</div></div>
     <div class="pagar-stat green"><div class="pagar-stat-val" style="font-size:18px">
       ${fmtMoney(totalPagado)}</div>
       <div class="pagar-stat-lbl">Total pagado</div></div>
@@ -4674,7 +4681,7 @@ async function exportarOrdenPago(ids) {
   if (cbAll) cbAll.checked = false;
 
   toast(
-    `✅ Orden generada: ${facturas.length} facturas por ${new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'}).format(totalGeneral)} → movidas a Facturas Pagadas`,
+    `✅ Orden generada: ${facturas.length} facturas por ${new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'}).format(totalGeneral)} → movidas a Facturas Conciliadas`,
     'success', 6000
   );
   renderPagar();
@@ -6313,6 +6320,14 @@ function tienePagoParcial(inv) {
 // Recalcular estado_rev según los pagos
 function recalcularEstado(inv) {
   if (inv.estado_rev === 'PENDIENTE' || inv.estado_rev === 'OBSERVADA') return;
+
+  // Documentos de compensación (valor negativo): PAGADA directamente
+  if ((totalEfectivo(inv) || 0) < 0) {
+    inv.estado_rev = 'PAGADA';
+    inv.fecha_pago = new Date().toISOString();
+    return;
+  }
+
   const pagos = getPagos(inv);
   const todosCanje = pagos.length > 0 && pagos.every(p => p.tipo === 'canje');
   const hayAlgunCanje = pagos.some(p => p.tipo === 'canje');
@@ -6321,7 +6336,6 @@ function recalcularEstado(inv) {
     inv.estado_rev = todosCanje ? 'CANJEADO' : 'PAGADA';
     inv.fecha_pago = pagos[pagos.length-1]?.fecha || new Date().toISOString();
   } else if (tienePagoParcial(inv)) {
-    // Si solo hay canjes parciales → CANJE PARCIAL, si hay mixtura → PAGO PARCIAL
     inv.estado_rev = (hayAlgunCanje && !pagos.some(p => p.tipo !== 'canje'))
       ? 'CANJE PARCIAL' : 'PAGO PARCIAL';
     inv.fecha_pago = null;
@@ -8852,6 +8866,111 @@ async function _buildExcelConfig(ids) {
 
   const filename = `OrdenPago_${date.replace(/\//g,'-')}_${facturas.length}fact.xlsx`;
   XLSX.writeFile(wb, filename);
+}
+
+
+// ── Exportar Excel del circuito sin marcar pagadas ───────────────────────────
+async function exportarExcelCircuito() {
+  // Tomar las seleccionadas, o todas si no hay ninguna seleccionada
+  let ids = _getCircuitoSeleccionados();
+  if (!ids.length) {
+    ids = DB.invoices
+      .filter(i => i.estado_rev === 'EN CIRCUITO DE PAGO')
+      .map(i => i.id);
+  }
+  if (!ids.length) { toast('No hay facturas en el circuito', 'warn'); return; }
+
+  const facturas = ids.map(id => DB.invoices.find(i=>i.id===id)).filter(Boolean);
+  const wb = XLSX.utils.book_new();
+  const fecha = new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
+
+  // Hoja principal
+  const header = [
+    'ID','Tipo','Nro. Factura','CUIT','Proveedor',
+    'F. Emisión','Período Contable','Tipo Pago','Total a Pagar',
+    'CBU','Mail','Celular','Concepto/Servicio'
+  ];
+
+  const rows = facturas.map(inv => {
+    const cfg  = getConfigPago(inv.id);
+    const dp   = getDatosProv(inv.cuit);
+    const monto = cfg?.transf_monto ?? cfg?.canje_monto ?? totalEfectivo(inv) ?? 0;
+    const tipoPago = cfg
+      ? { transferencia:'Transferencia', cheque:'Cheque',
+          cheque_diferido:'Cheque Diferido', canje:'Canje', mixto:'Mixto' }[cfg.tipo] || 'Transferencia'
+      : 'Transferencia';
+    return [
+      inv.id,
+      inv.tipo || '',
+      inv.numero_factura || '',
+      inv.cuit || '',
+      inv.proveedor || '',
+      inv.fecha_emision ? new Date(inv.fecha_emision) : '',
+      periodoToInput(inv.periodo_contable || ''),
+      tipoPago,
+      monto,
+      dp.cbu || inv.cbu || '',
+      dp.mail || '',
+      dp.telefono || '',
+      inv.concepto || '',
+    ];
+  });
+
+  // Fila de total
+  const total = rows.reduce((a, r) => a + (r[8] || 0), 0);
+  const hasNeg = rows.some(r => (r[8]||0) < 0);
+  const filaTotal = ['','','','','','','',
+    hasNeg ? 'TOTAL NETO' : 'TOTAL', total, '', '', '', ''];
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows, [], filaTotal]);
+
+  // Anchos de columna
+  ws['!cols'] = [
+    {wch:5},{wch:10},{wch:16},{wch:13},{wch:32},
+    {wch:11},{wch:12},{wch:14},{wch:16},
+    {wch:24},{wch:26},{wch:14},{wch:40}
+  ];
+
+  // Formato fecha y moneda
+  rows.forEach((_, ri) => {
+    const r = ri + 2;
+    const fc = ws['F'+r]; if (fc) fc.z = 'DD/MM/YYYY';
+    const mc = ws['I'+r]; if (mc && typeof mc.v === 'number') mc.z = '#,##0.00';
+  });
+  const tcell = ws['I'+(rows.length+3)];
+  if (tcell && typeof tcell.v === 'number') tcell.z = '#,##0.00';
+
+  XLSX.utils.book_append_sheet(wb, ws, 'En Circuito de Pago');
+
+  // Hoja resumen por proveedor
+  const byProv = {};
+  facturas.forEach(inv => {
+    const k = inv.cuit || inv.proveedor;
+    if (!byProv[k]) {
+      const dp = getDatosProv(inv.cuit);
+      const cfg = getConfigPago(inv.id);
+      byProv[k] = { proveedor:inv.proveedor||'', cuit:inv.cuit||'',
+        cbu:dp.cbu||inv.cbu||'', mail:dp.mail||'', total:0, cant:0 };
+    }
+    const cfg = getConfigPago(inv.id);
+    byProv[k].total += cfg?.transf_monto ?? cfg?.canje_monto ?? totalEfectivo(inv) ?? 0;
+    byProv[k].cant++;
+  });
+
+  const h2 = ['Proveedor','CUIT','CBU','Mail','Cant. Facturas','Total a Transferir'];
+  const r2 = Object.values(byProv).map(p =>
+    [p.proveedor, p.cuit, p.cbu, p.mail, p.cant, p.total]
+  );
+  const ws2 = XLSX.utils.aoa_to_sheet([h2, ...r2]);
+  ws2['!cols'] = [{wch:32},{wch:13},{wch:24},{wch:26},{wch:14},{wch:18}];
+  r2.forEach((_,ri) => {
+    const fc = ws2['F'+(ri+2)]; if(fc && typeof fc.v==='number') fc.z='#,##0.00';
+  });
+  XLSX.utils.book_append_sheet(wb, ws2, 'Por Proveedor');
+
+  const filename = `CircuitoPago_${fecha}_${facturas.length}fact.xlsx`;
+  XLSX.writeFile(wb, filename);
+  toast(`📊 Excel exportado: ${facturas.length} factura(s)`, 'success', 3000);
 }
 
 // Sort via event delegation (único listener, sin duplicados)
